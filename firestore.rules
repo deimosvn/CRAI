@@ -1,139 +1,122 @@
 rules_version = '2';
+
+// Reglas de CRAI Club.
+// - Solo miembros con sesión iniciada pueden leer perfiles y publicaciones.
+// - Cada persona solo crea, edita o borra lo suyo.
+// - Las solicitudes de contacto solo las ven quien envía y quien recibe.
+// - Todo lo que no aparece aquí queda bloqueado.
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ========== USUARIOS (Público para ver miembros) ==========
-    match /users/{userId} {
-      allow read: if true;  // ← Permite ver miembros sin login
-      allow create: if request.auth != null;
-      // Permite update si: es el propio usuario O es admin (para gestionar logros)
-      allow update: if request.auth != null && (
-        request.auth.uid == userId || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        request.auth.token.email == 'a23490819@itmexicali.edu.mx'
-      );
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function text(v, max) { return v is string && v.size() <= max; }
+    function hasProfile() { return exists(/databases/$(database)/documents/profiles/$(request.auth.uid)); }
+
+    function validProfile(d) {
+      return d.keys().hasOnly(['name', 'role', 'door', 'building', 'bio', 'skills', 'learn', 'seeking', 'offers',
+          'needsTags', 'offerTags', 'tags', 'avail', 'open', 'interests', 'links', 'privacy', 'zone', 'langs',
+          'prefers', 'style', 'hue', 'photo', 'toon', 'createdAt', 'updatedAt', 'lastSeen'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.door in ['founders', 'underground', 'both']
+        && text(d.get('role', ''), 80)
+        && text(d.get('building', ''), 160)
+        && text(d.get('bio', ''), 400)
+        && text(d.get('offers', ''), 300)
+        && text(d.get('style', ''), 200)
+        && text(d.get('zone', ''), 60)
+        && text(d.get('prefers', ''), 40)
+        && text(d.get('photo', ''), 500)
+        && d.get('skills', []) is list && d.get('skills', []).size() <= 20
+        && d.get('learn', []) is list && d.get('learn', []).size() <= 20
+        && d.get('seeking', []) is list && d.get('seeking', []).size() <= 10
+        && d.get('needsTags', []) is list && d.get('needsTags', []).size() <= 20
+        && d.get('offerTags', []) is list && d.get('offerTags', []).size() <= 20
+        && d.get('tags', []) is list && d.get('tags', []).size() <= 20
+        && d.get('avail', []) is list && d.get('avail', []).size() <= 4
+        && d.get('langs', []) is list && d.get('langs', []).size() <= 8
+        && d.get('open', true) is bool
+        && d.get('toon', {}) is map && d.get('toon', {}).size() <= 20;
     }
-    
-    // ========== CÓDIGOS DE ACCESO ==========
-    match /access_codes/{codeId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    // Perfiles de miembros
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner(uid) && validProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid) && validProfile(request.resource.data)
+        && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null);
+      allow delete: if isOwner(uid);
     }
-    
-    // ========== CONTENIDO DEL SITIO ==========
-    match /site_content/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    // Publicaciones del feed
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && hasProfile()
+        && request.resource.data.keys().hasOnly(['type', 'text', 'tags', 'project', 'authorId', 'commentCount', 'createdAt'])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.type in ['building', 'help', 'offer', 'opportunity', 'launched', 'team', 'ask']
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+        && request.resource.data.tags is list && request.resource.data.tags.size() <= 8
+        && (request.resource.data.project == null || text(request.resource.data.project, 40))
+        && request.resource.data.commentCount == 0
+        && request.resource.data.createdAt == request.time;
+      // Cualquier miembro puede sumar 1 al contador al comentar; nada más.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
+        && request.resource.data.commentCount == resource.data.commentCount + 1;
+      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && hasProfile()
+          && request.resource.data.keys().hasOnly(['authorId', 'text', 'createdAt'])
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 300
+          && request.resource.data.createdAt == request.time;
+        allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+      }
     }
-    
-    // ========== PROYECTOS (Público para ver proyectos) ==========
-    match /projects/{projectId} {
-      allow read: if true;  // ← Permite ver proyectos sin login
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+
+    // Solicitudes de primer contacto
+    match /requests/{requestId} {
+      allow read: if signedIn() && (resource.data.toId == request.auth.uid || resource.data.fromId == request.auth.uid);
+      allow create: if signedIn() && hasProfile()
+        && request.resource.data.keys().hasOnly(['fromId', 'toId', 'text', 'fmt', 'read', 'createdAt'])
+        && request.resource.data.fromId == request.auth.uid
+        && request.resource.data.toId is string && request.resource.data.toId != request.auth.uid
+        && exists(/databases/$(database)/documents/profiles/$(request.resource.data.toId))
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600
+        && text(request.resource.data.fmt, 10)
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
+      // Quien recibe solo puede marcarla como leída.
+      allow update: if signedIn() && resource.data.toId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if false;
     }
-    
-    // ========== RECURSOS ==========
-    match /resources/{resourceId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+
+    // Solicitudes de miembros fundadores (formulario de la landing)
+    match /applications/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'building', 'need', 'door', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && text(request.resource.data.building, 160)
+        && text(request.resource.data.get('need', ''), 160)
+        && request.resource.data.door in ['founders', 'underground', 'both']
+        && request.resource.data.createdAt == request.time;
     }
-    
-    // ========== SOLICITUDES/APLICACIONES ==========
-    match /applications/{applicationId} {
-      allow read: if request.auth != null;
-      allow create: if true;
-      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    // Denuncias: se crean, pero solo se revisan desde la consola.
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporterId', 'targetId', 'kind', 'createdAt'])
+        && request.resource.data.reporterId == request.auth.uid
+        && text(request.resource.data.targetId, 128)
+        && text(request.resource.data.kind, 20)
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
     }
-    
-    // ========== SOLICITUDES DE PATROCINIO ==========
-    match /sponsorship_requests/{requestId} {
-      allow read: if request.auth != null;
-      allow create: if true;  // ← Cualquiera puede enviar solicitud (empresas sin cuenta)
-      allow update, delete: if request.auth != null && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        request.auth.token.email == 'a23490819@itmexicali.edu.mx'
-      );
-    }
-    
-    // ========== CHAT / MENSAJES ==========
-    match /chat_logs/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.senderId;
-    }
-    
-    // ========== RESERVACIONES ==========
-    match /reservations/{reservationId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== INVENTARIO ==========
-    match /inventory/{itemId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== WIKI / DOCUMENTACIÓN ==========
-    match /wiki/{articleId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== COMPETENCIAS ==========
-    match /competitions/{competitionId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== REGISTROS DE COMPETENCIAS ==========
-    match /competition_registrations/{registrationId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== TAREAS (KANBAN) ==========
-    match /tasks/{taskId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== EVENTOS DE CALENDARIO ==========
-    match /calendar_events/{eventId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== ANUNCIOS ==========
-    match /announcements/{announcementId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== EVENTOS PÚBLICOS (Nuevo sistema de eventos) ==========
-    match /publicEvents/{eventId} {
-      allow read: if true;  // ← Público puede ver eventos
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-    
-    // ========== INSCRIPCIONES A EVENTOS PÚBLICOS ==========
-    match /eventRegistrations/{regId} {
-      allow read: if request.auth != null;
-      allow create: if true;  // ← Público puede inscribirse
-      allow update, delete: if request.auth != null;
-    }
-    
   }
 }
