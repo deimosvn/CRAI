@@ -89,6 +89,10 @@ Las preferencias que no necesitan servidor (tema, filtros, proyectos seguidos) s
 
 Los detalles y límites de cada campo están en `firestore.rules`, y cada regla tiene su prueba en `tests/firestore.rules.test.mjs`.
 
+## Google Analytics
+
+Cada sección cuenta como una página (`/club/<sección>`) y las acciones importantes se miden con `C.track(nombre, datos)`. La lista de eventos y cómo verlos en Firebase: [ANALYTICS.md](ANALYTICS.md).
+
 ## Apple Wallet
 
 La credencial de miembro y la invitación al Build Night se firman en Vercel (`api/wallet`). Detalles y cómo activarlo: [WALLET.md](WALLET.md).

@@ -190,6 +190,7 @@
   C.openBizcard = (id) => {
     const p = C.person(id);
     if (!p) return;
+    C.track('view_item', { item_category: 'tarjeta', propia: id === 'me' ? 'si' : 'no' });
     const liveLink = C.isLive() && (p.live || p.id === 'me') && p.uid;
     const handle = liveLink ? `${location.host}${location.pathname.replace(/index\.html$/, '')}#p-${p.uid}` : 'clubcrai.com/p/' + C.norm(p.name).replace(/[^a-z]+/g, '');
     const panel = C.openLayer('modal', `
@@ -319,6 +320,7 @@
     },
     'copy-link': (el) => {
       const link = el.dataset.link;
+      C.track('share', { method: 'copiar_enlace', content_type: 'perfil' });
       const done = () => C.toast('Enlace copiado.', 'link');
       const fail = () => C.toast(`Copia el enlace: ${esc(link)}`, 'link');
       try { navigator.clipboard.writeText(link).then(done, fail); } catch (e) { fail(); }

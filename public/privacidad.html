@@ -60,7 +60,7 @@
     <li><b>Cuenta:</b> tu nombre y tu correo, o los datos básicos de tu cuenta de Google si entras con ella.</li>
     <li><b>Perfil:</b> lo que tú escribes: a qué te dedicas, qué construyes, habilidades, qué necesitas y qué aportas, disponibilidad, zona de la ciudad, idiomas, enlaces y tu personaje.</li>
     <li><b>Actividad:</b> tus publicaciones, comentarios, mensajes de primer contacto, tu solicitud de miembro fundador y las denuncias que hagas.</li>
-    <li><b>Uso del sitio:</b> estadísticas generales de navegación (Google Analytics) para saber qué partes se usan y mejorar el club.</li>
+    <li><b>Uso del sitio:</b> estadísticas con Google Analytics (de Firebase): qué secciones visitas, qué botones usas (por ejemplo, registrarte, publicar o pedir indicaciones para el Build Night), el tipo de dispositivo, tu ciudad aproximada y un identificador interno de tu cuenta. Nunca mandamos tu nombre, tu correo ni lo que escribes en publicaciones o mensajes.</li>
     <li><b>En tu navegador:</b> preferencias como el tema claro u oscuro y los filtros. No salen de tu dispositivo.</li>
   </ul>
   <p>No pedimos datos sensibles ni financieros.</p>
@@ -112,6 +112,13 @@
     document.getElementById('contactLine').innerHTML = 'Para cualquier duda sobre privacidad, escríbenos a ' + a + '.';
     document.getElementById('contactRights').innerHTML = 'Si necesitas algo que no puedas hacer desde tu perfil, escríbenos a ' + a + '.';
   })();
+</script>
+<script type="module">
+  // Visita a esta página en Google Analytics (no se mide en local).
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+  import { getAnalytics, isSupported } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js';
+  const cfg = (window.CRAI_CONFIG || {}).firebase;
+  if (cfg && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) isSupported().then((ok) => { if (ok) getAnalytics(initializeApp(cfg)); }).catch(() => {});
 </script>
 </body>
 </html>

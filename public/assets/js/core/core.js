@@ -366,6 +366,21 @@
     else setTimeout(() => C.toast(`Quest en progreso: ${S.quests[id]} de ${q.goal}`, 'flag'), 700);
   };
 
+  /* ---------- Analytics ---------- */
+  // Cualquier parte de la app mide con C.track(nombre, datos). Mientras Firebase carga, los eventos esperan.
+  // Nunca se manda texto escrito por la persona (publicaciones, mensajes, nombres). Ver docs/ANALYTICS.md.
+  const trackQueue = [];
+  C.track = (name, params = {}) => {
+    try {
+      if (C.fb && C.fb.track) C.fb.track(name, params);
+      else if (trackQueue.length < 50) trackQueue.push([name, params]);
+    } catch (e) { /* Analytics nunca rompe la app */ }
+  };
+  C.flushTrack = () => { while (trackQueue.length) { const [n, p] = trackQueue.shift(); C.track(n, p); } };
+  // Desde qué parte de la página se tocó algo (para comparar botones iguales en distintos lugares).
+  C.placeOf = (el) => (!el || !el.closest ? 'otro' : el.closest('#topbar') ? 'barra_superior' : el.closest('.menu-sheet') ? 'menu' : el.closest('.hero') ? 'hero'
+    : el.closest('.ticket') ? 'build_night' : el.closest('.foot') ? 'pie' : el.closest('#appRoot') ? 'app' : el.closest('#layers') ? 'ventana' : 'landing');
+
   /* ---------- Avisos ---------- */
   C.toast = (msg, ic = 'check') => {
     const box = C.$('#toasts');

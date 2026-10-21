@@ -111,7 +111,7 @@
     else window.addEventListener('resize', () => { setW(); sizeStars(); });
     requestAnimationFrame(sizeStars);
     $$('.door', wrap).forEach((d) => {
-      d.addEventListener('click', (e) => C.openOnboarding(d.dataset.door, e));
+      d.addEventListener('click', (e) => { C.track('cta_click', { cta: 'puerta_' + d.dataset.door, location: 'landing' }); C.openOnboarding(d.dataset.door, e); });
       d.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); C.openOnboarding(d.dataset.door, e); }
       });
@@ -295,6 +295,7 @@
       const name = String(fd.get('name') || '').trim();
       const building = String(fd.get('building') || '').trim();
       if (!name || !building) return;
+      C.track('cta_click', { cta: 'presentar_proyecto', location: 'landing' });
       const live = !!window.CRAI_LIVE;
       S.applied = { name, building, need: String(fd.get('need') || '').trim(), door: String(fd.get('door') || 'both'), seat: live ? 0 : 1 + Math.floor(Math.random() * 30) };
       C.save();
@@ -319,7 +320,7 @@
   function mobileMenu() {
     const btn = $('#menuBtn');
     if (!btn) return;
-    btn.addEventListener('click', () => C.openLayer('modal', menuHTML(), { cls: 'menu-sheet', label: 'Menú' }));
+    btn.addEventListener('click', () => { C.track('cta_click', { cta: 'menu', location: 'barra_superior' }); C.openLayer('modal', menuHTML(), { cls: 'menu-sheet', label: 'Menú' }); });
   }
   C.extraActions = Object.assign(C.extraActions || {}, {
     'nav-to': (el) => {
@@ -328,6 +329,21 @@
       if (t) setTimeout(() => t.scrollIntoView({ behavior: C.RM() ? 'auto' : 'smooth', block: 'start' }), 80);
     }
   });
+
+  /* ---------- Analytics: secciones vistas ---------- */
+  // Una vez por visita, cuando la sección llega a la parte alta de la pantalla.
+  function sectionViews() {
+    if (!('IntersectionObserver' in window)) return;
+    const seen = new Set();
+    const io = new IntersectionObserver((es) => es.forEach((en) => {
+      const id = en.target.id;
+      if (!en.isIntersecting || seen.has(id)) return;
+      seen.add(id);
+      io.unobserve(en.target);
+      C.track('view_section', { section: id });
+    }), { rootMargin: '0px 0px -40% 0px' });
+    ['puertas', 'preguntas', 'funciones', 'semana', 'irl', 'reglas', 'ruta', 'unete'].forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  }
 
   /* ---------- Botones magnéticos ---------- */
   function magnets() {
@@ -477,6 +493,7 @@
     bindApply();
     magnets();
     mobileMenu();
+    sectionViews();
     C.tilt($('#ticket'), 12);
     C.observeReveal($('#site'));
   };

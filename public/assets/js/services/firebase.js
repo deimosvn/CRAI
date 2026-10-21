@@ -2,9 +2,9 @@
 // Expone una API pequeña en window.CRAI.attachFirebase(api); el resto de la app no importa el SDK.
 // La configuración del proyecto vive en assets/js/core/config.js.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-import { getAnalytics, isSupported } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js';
+import { initializeAnalytics, isSupported, logEvent, setUserId, setUserProperties } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js';
 import {
-  getAuth, connectAuthEmulator, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  getAuth, connectAuthEmulator, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, getAdditionalUserInfo,
   createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updateProfile, signOut, deleteUser
 } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import {
@@ -15,7 +15,8 @@ import {
 const CFG = window.CRAI_CONFIG || {};
 const app = initializeApp(CFG.firebase);
 const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
-const useEmulators = isLocal && new URLSearchParams(location.search).has('emulator');
+const params = new URLSearchParams(location.search);
+const useEmulators = isLocal && params.has('emulator');
 
 const auth = getAuth(app);
 auth.languageCode = 'es';
@@ -23,9 +24,31 @@ const db = getFirestore(app);
 if (useEmulators) {
   connectAuthEmulator(auth, CFG.emulators.auth, { disableWarnings: true });
   connectFirestoreEmulator(db, CFG.emulators.firestore[0], CFG.emulators.firestore[1]);
-} else {
-  isSupported().then((ok) => { if (ok) getAnalytics(app); }).catch(() => {});
 }
+
+// Google Analytics 4 (mismo flujo que ves en Firebase › Analytics). Las vistas de la app se mandan a mano
+// porque es una sola página (send_page_view: false). En local no se mide, salvo con ?debug_analytics,
+// que además manda todo a Firebase › Analytics › DebugView. Ver docs/ANALYTICS.md.
+const debugAnalytics = params.has('debug_analytics');
+let analytics = null;
+const pending = [];
+const withAnalytics = (fn) => {
+  if (analytics) { try { fn(analytics); } catch (e) { /* Analytics nunca rompe la app */ } }
+  else if (pending.length < 100) pending.push(fn);
+};
+if (!isLocal || debugAnalytics) {
+  isSupported().then((ok) => {
+    if (!ok) return;
+    analytics = initializeAnalytics(app, { config: { send_page_view: false, ...(debugAnalytics ? { debug_mode: true } : {}) } });
+    pending.splice(0).forEach(withAnalytics);
+  }).catch(() => {});
+}
+const track = (name, data) => withAnalytics((a) => logEvent(a, name, data));
+// sign_up la primera vez, login las siguientes (eventos recomendados de GA4).
+const trackAuth = (cred, method) => {
+  const info = cred && getAdditionalUserInfo(cred);
+  track(info && info.isNewUser ? 'sign_up' : 'login', { method });
+};
 
 const ts = (v) => (v && typeof v.toMillis === 'function' ? v.toMillis() : typeof v === 'number' ? v : Date.now());
 const rows = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
@@ -40,11 +63,17 @@ const api = {
   idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error('Sin sesión'))),
   onUser: (cb) => onAuthStateChanged(auth, cb),
 
+  // Analytics: eventos y la persona detrás de ellos (su uid de Firebase, nunca nombre ni correo).
+  track,
+  identify: (uid, props) => withAnalytics((a) => { setUserId(a, uid || null); if (props) setUserProperties(a, props); }),
+
   async google() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      return await signInWithPopup(auth, provider);
+      const cred = await signInWithPopup(auth, provider);
+      trackAuth(cred, 'google');
+      return cred;
     } catch (e) {
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment') return signInWithRedirect(auth, provider);
       throw e;
@@ -52,11 +81,16 @@ const api = {
   },
   async signUp(name, email, password) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
+    track('sign_up', { method: 'email' });
     if (name) await updateProfile(cred.user, { displayName: name }).catch(() => {});
     sendEmailVerification(cred.user).catch(() => {});
     return cred;
   },
-  signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+  async signIn(email, password) {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    track('login', { method: 'email' });
+    return cred;
+  },
   reset: (email) => sendPasswordResetEmail(auth, email),
   resendVerification: () => (auth.currentUser ? sendEmailVerification(auth.currentUser) : Promise.resolve()),
   signOut: () => signOut(auth),
@@ -130,6 +164,6 @@ const api = {
   }
 };
 
-getRedirectResult(auth).catch(() => {});
+getRedirectResult(auth).then((cred) => { if (cred) trackAuth(cred, 'google'); }).catch(() => {});
 if (window.CRAI && typeof window.CRAI.attachFirebase === 'function') window.CRAI.attachFirebase(api);
 else window.CRAI_FB = api;

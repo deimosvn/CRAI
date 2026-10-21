@@ -278,6 +278,7 @@
       C.reloadLocal();
       S.me = Object.assign({}, JSON.parse(JSON.stringify(D.me)), C.store.get('me', {}));
       S.liveMembers = []; S.liveById = {}; S.livePosts = []; S.inbox = []; S.liveComments = {}; S.admin = { reports: [], apps: [], bans: [] };
+      fb.identify(null, { con_cuenta: 'no' });
       S.auth.ready = true;
       updateTopbar();
       if (S.mode === 'app') C.go('landing');
@@ -310,6 +311,7 @@
       fb.signOut().catch(() => {});
       return;
     }
+    fb.identify(user.uid, { con_cuenta: 'si', con_perfil: doc ? 'si' : 'no', puerta: doc && DOORS.includes(doc.door) ? doc.door : 'sin_perfil' });
     if (doc) {
       setMe(doc, user);
       S.auth.profile = true;
@@ -327,7 +329,7 @@
     const a = S.applied;
     if (!a || !S.auth.user) return;
     fb.saveApplication(S.auth.user.uid, { name: clip(a.name, 60), building: clip(a.building, 160), need: clip(a.need, 160), door: DOORS.includes(a.door) ? a.door : 'both' })
-      .then(() => C.toast('Guardamos tu solicitud de miembro fundador.', 'sun'))
+      .then(() => { C.track('generate_lead', { lead_source: 'miembros_fundadores', puerta: DOORS.includes(a.door) ? a.door : 'both' }); C.toast('Guardamos tu solicitud de miembro fundador.', 'sun'); })
       .catch((e) => C.toast(`No pudimos guardar tu solicitud: ${esc(errMsg(e))}`, 'info'));
   }
   const go0 = C.go;
@@ -392,6 +394,8 @@
       startWatchers();
       updateTopbar();
       if (S.applied) saveApplication();
+      C.track('tutorial_complete', { puerta: fresh.door });
+      fb.identify(user.uid, { con_perfil: 'si', puerta: fresh.door });
       go0('inicio', e, el);
       setTimeout(() => C.toast(`Te damos la bienvenida a CRAI, ${esc(C.firstName(S.me))}. Arma tu personaje en Mi perfil.`, 'sun'), 700);
     }).catch((err) => {
@@ -464,6 +468,7 @@
     },
     'toggle-demo': () => { S.showDemo = !S.showDemo; C.save(); C.rerender(); },
     invite: () => {
+      C.track('share', { method: 'invitar', content_type: 'club' });
       const text = `Te invito a CRAI Club, la comunidad de quienes construyen en Mexicali: ${siteLink()}`;
       const fail = () => C.toast(`Copia y comparte: ${esc(siteLink())}`, 'link');
       if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ title: 'CRAI Club', text, url: siteLink() }).catch(() => {}); return; }
@@ -490,6 +495,7 @@
       busy(el, 'Borrando tu cuenta…');
       stopWatchers();
       fb.deleteAccount().then(() => {
+        C.track('account_delete');
         C.store.scope(uid); C.store.clear(); C.store.scope(null);
         C.toast('Borramos tu cuenta y tus datos del club.', 'check');
       }).catch((e) => {
@@ -502,7 +508,7 @@
       });
     },
     report: (el) => {
-      fb.report(S.auth.user.uid, el.dataset.id, 'perfil').then(() => C.toast('Gracias. El equipo revisará este perfil.', 'shield')).catch((e) => C.toast(esc(errMsg(e)), 'info'));
+      fb.report(S.auth.user.uid, el.dataset.id, 'perfil').then(() => C.track('report_submit', { kind: 'perfil' })).then(() => C.toast('Gracias. El equipo revisará este perfil.', 'shield')).catch((e) => C.toast(esc(errMsg(e)), 'info'));
     },
     'enter-applied': (el, e) => {
       if (S.auth.user && !S.auth.profile) { saveApplication(); C.openOnboarding((S.applied && S.applied.door) || 'both', e); return; }
@@ -536,6 +542,7 @@
         S.ff = { type: 'all', sort: 'recent' };
         C.closeAll();
         C.toast('Publicado en Community.', 'send');
+        C.track('post_create', { post_type: type, temas: tags.length });
         if (S.view === 'community' && S.mode === 'app') C.rerender(); else go0('community', e, btn);
         if (type === 'building' || type === 'launched') C.advanceQuest('q2');
       }).catch((err) => { busy(btn, null); C.toast(`No se pudo publicar: ${esc(errMsg(err))}`, 'info'); });
@@ -548,7 +555,7 @@
       if (!text) return;
       input.disabled = true;
       fb.addComment(S.auth.user.uid, id, text)
-        .then(() => { f.reset(); })
+        .then(() => { f.reset(); C.track('comment_create'); })
         .catch((err) => C.toast(`No se pudo comentar: ${esc(errMsg(err))}`, 'info'))
         .finally(() => { input.disabled = false; input.focus({ preventScroll: true }); });
     },
@@ -562,6 +569,7 @@
       const btn = f.querySelector('[type="submit"]');
       busy(btn, 'Enviando…');
       fb.sendRequest(S.auth.user.uid, id, text, fmt).then(() => {
+        C.track('contact_request', { formato: fmt, tipo: f.dataset.help === '1' ? 'ofrecer_ayuda' : 'primer_contacto' });
         if (!S.contacted.includes(id)) S.contacted.push(id);
         C.save();
         const panel = f.closest('.modal');
@@ -598,6 +606,7 @@
   C.attachFirebase = (api) => {
     if (fb) return;
     fb = C.fb = api;
+    C.flushTrack();
     S.auth.failed = false;
     fb.onUser(onUser);
   };

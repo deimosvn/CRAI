@@ -55,6 +55,7 @@
   C.extraActions = Object.assign(C.extraActions || {}, {
     'wallet-member': async (el) => {
       if (!C.isLive() || !C.fb) return;
+      C.track('add_to_wallet', { pass: 'credencial' });
       working(el, true);
       try {
         const token = await C.fb.idToken();
@@ -67,6 +68,7 @@
       }
     },
     'wallet-event': async (el) => {
+      C.track('add_to_wallet', { pass: 'build_night', location: C.placeOf(el) });
       working(el, true);
       if (C.isLive() && C.fb) {
         try { post('/build-night', { token: await C.fb.idToken() }); return; } catch (e) { /* sigue como invitación general */ }

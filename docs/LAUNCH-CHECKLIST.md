@@ -17,12 +17,14 @@
 - [x] CRAI Build Night: cada jueves de 19:00 a 22:00 en Cervecería Averno (Av. República de Brasil 115, Cuauhtémoc Norte), con «Cómo llegar» y la fecha del próximo jueves.
 - [x] Correo de contacto contacto@clubcrai.com en el aviso de privacidad, Mi perfil y el pie de página (`contactEmail` en `config.js`).
 - [x] Apple Wallet: credencial de miembro e invitación al Build Night, firmadas en Vercel (falta el certificado; ver abajo).
+- [x] Google Analytics: vistas por sección, registros, publicaciones, mensajes, clics en «Únete» y en «Cómo llegar», con modo DebugView (`docs/ANALYTICS.md`).
 - [x] La landing ya no presenta datos de ejemplo como reales (evento, lugar, «datos de ejemplo» en el pie).
 
 ## Pendiente de decidir o configurar (fuera del código)
 
 - [ ] **Vista previa en redes:** si un enlace ya se compartió antes, Facebook y WhatsApp guardan la imagen vieja; se refresca en https://developers.facebook.com/tools/debug/ («Volver a extraer»).
 - [ ] **Activar Apple Wallet:** cuenta de Apple Developer, certificado de Pass Type ID y variables en Vercel (pasos en `docs/WALLET.md`).
+- [ ] **Google Analytics:** marcar eventos clave, crear dimensiones personalizadas y subir la retención a 14 meses (pasos en `docs/ANALYTICS.md`).
 - [ ] **Revisión legal:** el aviso de privacidad es una base clara; conviene que lo revise alguien con experiencia en la LFPDPPP.
 - [ ] **Plantillas de correo de Firebase** en español (Authentication › Templates).
 - [ ] **GitHub Pages del repositorio CRAI:** opcional, cambiar la fuente a GitHub Actions (ver `docs/DEPLOY.md`).

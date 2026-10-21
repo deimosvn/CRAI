@@ -40,5 +40,6 @@ npm run deploy       # publica en Firebase Hosting y sube las reglas
 
 - [Arquitectura](docs/ARCHITECTURE.md): cómo está armado el código, los datos y la administración.
 - [Desarrollo y publicación](docs/DEPLOY.md): emuladores, pruebas, Vercel, Firebase y GitHub Pages.
+- [Google Analytics](docs/ANALYTICS.md): qué se mide y dónde verlo en Firebase.
 - [Apple Wallet](docs/WALLET.md): credencial y pase del Build Night; cómo activarlo.
 - [Lista para el lanzamiento](docs/LAUNCH-CHECKLIST.md): qué está listo y qué falta decidir.

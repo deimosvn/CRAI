@@ -79,6 +79,20 @@
   const applyDoor = () => { if (S.mode === 'app' && S.door !== 'all') root.dataset.door = S.door; else root.removeAttribute('data-door'); };
   const setHash = (v) => { try { history.replaceState(null, '', v ? '#' + v : location.pathname + location.search); } catch (e) { /* nada */ } };
 
+  // Analytics: cada sección cuenta como una página: «/» para la landing y «/club/<vista>» para la app.
+  const VIEW_TITLES = { blueprint: 'Blueprint', admin: 'Administración' };
+  let lastView = '';
+  function trackView(view) {
+    if (view === lastView) return;
+    lastView = view;
+    const base = location.origin + location.pathname.replace(/index\.html$/, '');
+    const label = view === 'landing' ? '' : ((NAV.find((n) => n.id === view) || {}).label || VIEW_TITLES[view] || view);
+    C.track('page_view', {
+      page_title: label ? `${label} · CRAI Club` : 'CRAI Club · Mexicali',
+      page_location: base + (view === 'landing' ? '' : 'club/' + view) + location.search
+    });
+  }
+
   function showLanding() {
     S.mode = 'landing';
     $('#appRoot').hidden = true;
@@ -89,6 +103,7 @@
     C.landing.resume();
     C.landing.refresh();
     setHash('');
+    trackView('landing');
   }
   function showApp(view) {
     S.mode = 'app';
@@ -102,6 +117,7 @@
     renderView();
     window.scrollTo(0, 0);
     C.landing.pause();
+    trackView(view);
   }
   C.go = (view, e, el) => {
     C.closeAll();
@@ -116,6 +132,7 @@
     else if (view === S.view) { C.rerender(); window.scrollTo({ top: 0, behavior: C.RM() ? 'auto' : 'smooth' }); }
     else C.transition(() => { S.view = view; renderView(); window.scrollTo(0, 0); });
     setHash(view);
+    trackView(view);
   };
 
   /* ---------- Tema y puerta ---------- */
@@ -506,9 +523,10 @@
     compose: (el) => openCompose(el.dataset.type, el.dataset.preset || ''),
     need: () => { C.closeAll(); setTimeout(openNeed, C.topLayer() ? 120 : 0); },
     more: () => openMore(),
-    join: (el, e) => (C.openJoin ? C.openJoin('signup') : C.go('inicio', e, el)),
-    login: (el, e) => (C.openJoin ? C.openJoin('signin') : C.go('inicio', e, el)),
+    join: (el, e) => { C.track('cta_click', { cta: 'unete', location: C.placeOf(el) }); return C.openJoin ? C.openJoin('signup') : C.go('inicio', e, el); },
+    login: (el, e) => { C.track('cta_click', { cta: 'entrar', location: C.placeOf(el) }); return C.openJoin ? C.openJoin('signin') : C.go('inicio', e, el); },
     'edit-profile': (el, e) => {
+      C.track('cta_click', { cta: 'editar_perfil', location: C.placeOf(el) });
       C.closeAll();
       const jump = () => { const f = $('#profileForm'); if (f) f.scrollIntoView({ behavior: C.RM() ? 'auto' : 'smooth', block: 'start' }); const n = $('#pf-name'); if (n) setTimeout(() => n.focus({ preventScroll: true }), 450); };
       if (S.view === 'perfil' && S.mode === 'app') jump(); else { C.go('perfil', e, el); setTimeout(jump, 500); }
@@ -649,6 +667,8 @@
   const F = {
     match: (f) => {
       S.match.q = f.q.value.trim() || C.defaultNeedQuery();
+      // Solo los temas detectados, nunca el texto libre.
+      C.track('search', { search_term: C.parseNeeds(S.match.q).join(',') || 'sin_tema', source: 'collab_match' });
       C.rerender();
       const r = $('#matchResults');
       if (r && innerWidth < 1100) r.scrollIntoView({ behavior: C.RM() ? 'auto' : 'smooth', block: 'start' });
@@ -715,6 +735,14 @@
   C.baseForms = F;
 
   /* ---------- Eventos globales ---------- */
+  // Analytics: enlaces que salen del sitio (Google Maps del Build Night y correo de contacto).
+  doc.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (/google\.com\/maps/.test(href)) C.track('directions_click', { place: 'cerveceria_averno', location: C.placeOf(a) });
+    else if (href.startsWith('mailto:')) C.track('contact_email_click', { location: C.placeOf(a) });
+  }, true);
   doc.addEventListener('click', (e) => {
     const t = e.target.closest('[data-go],[data-act]');
     if (!t || t.tagName === 'INPUT') return;
@@ -803,5 +831,5 @@
   const start = location.hash.slice(1);
   if (APP_VIEWS.includes(start) && window.CRAI_LIVE) C.pendingView = start;
   else if (APP_VIEWS.includes(start)) showApp(start);
-  else root.dataset.mode = 'landing';
+  else { root.dataset.mode = 'landing'; trackView('landing'); }
 })();
