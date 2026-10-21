@@ -253,12 +253,12 @@ window.CRAI_DATA = (function () {
 
   const events = [
     { id: 'bn08', title: 'CRAI Build Night #08', kind: 'Build Night', door: 'both', dow: 4, weeks: 0, time: '19:00 – 22:00',
-      venue: 'La Bodega · Centro', cap: 40, going: 27, hidden: 4, host: 'ximena', featured: true,
+      venue: 'Cervecería Averno · Cuauhtémoc Norte', cap: 40, going: 27, hidden: 4, host: 'ximena', featured: true,
       attendees: ['ximena', 'ivan', 'andres', 'mariana', 'jorge', 'salvador', 'paola', 'tomas', 'daniela'],
       desc: 'Llega con tu laptop o tu protoboard. Trabajas en tu proyecto, pides ayuda cuando te atores y a las 21:30 muestras lo que avanzaste en dos minutos.',
       agenda: [['19:00', 'Llegas y abres tu laptop'], ['19:15', 'Ronda rápida: qué vas a lograr hoy'], ['19:30', 'Trabajo profundo y ayuda entre mesas'], ['21:30', 'Demos de dos minutos'], ['22:00', 'Cierre y conexiones']] },
     { id: 'demo', title: 'Demo Day de la semana', kind: 'Demo', door: 'both', dow: 5, weeks: 0, time: '18:30 – 20:30',
-      venue: 'La Bodega · Centro', cap: 60, going: 31, hidden: 6, host: 'ximena',
+      venue: 'Cervecería Averno · Cuauhtémoc Norte', cap: 60, going: 31, hidden: 6, host: 'ximena',
       attendees: ['valeria', 'salvador', 'sofia', 'camila', 'andres', 'paola'],
       desc: 'Ocho proyectos, cinco minutos cada uno: qué construyeron, qué aprendieron y qué necesitan. Al final, mesas abiertas para ofrecer ayuda.' },
     { id: 'fw', title: 'Taller: firmware para no ingenieros', kind: 'Taller', door: 'underground', dow: 6, weeks: 0, time: '10:00 – 13:00',
@@ -274,11 +274,11 @@ window.CRAI_DATA = (function () {
       attendees: ['hector', 'valeria', 'sofia', 'fernanda', 'ricardo', 'tomas'],
       desc: 'Doce founders, una mesa larga y una regla: cada quien cuenta qué le está costando más trabajo este mes.' },
     { id: 'hack', title: 'Hackatón 686: calor extremo', kind: 'Hackatón', door: 'underground', dow: 5, weeks: 3, time: 'Vie 18:00 → dom 18:00',
-      venue: 'La Bodega · Centro', cap: 80, going: 38, hidden: 9, host: 'andres',
+      venue: 'Sede por confirmar', cap: 80, going: 38, hidden: 9, host: 'andres',
       attendees: ['andres', 'ivan', 'paola', 'daniela', 'jorge', 'mariana', 'tomas', 'salvador'],
       desc: '48 horas para construir herramientas que ayuden a vivir y trabajar con 50 °C. Equipos de 2 a 4 personas. Se vale hardware.' },
     { id: 'bn07', title: 'CRAI Build Night #07', kind: 'Build Night', door: 'both', dow: 4, weeks: -1, past: true, time: '19:00 – 22:00',
-      venue: 'La Bodega · Centro', cap: 40, going: 31, hidden: 5, host: 'ximena',
+      venue: 'Cervecería Averno · Cuauhtémoc Norte', cap: 40, going: 31, hidden: 5, host: 'ximena',
       attendees: ['ximena', 'ivan', 'andres', 'mariana', 'salvador', 'valeria', 'me'],
       desc: 'Sesión de trabajo de la semana pasada.',
       results: { demos: 6, connections: 9, highlights: ['Brisa consiguió dos escuelas piloto.', 'Ruta 686 encontró diseñadora: Mariana se unió al equipo.', 'Salvador vendió 4 kits del Sintetizador Cachanilla.'] } }
@@ -322,7 +322,7 @@ window.CRAI_DATA = (function () {
     { id: 'q3', title: 'Da retroalimentación útil a dos proyectos', goal: 2, start: 1, badge: 'ojo', hint: 'Abre un proyecto y usa «Ofrecer ayuda».', go: 'projects', cta: 'Ver proyectos' },
     { id: 'q4', title: 'Forma un equipo de tres personas y crea un prototipo en siete días', goal: 3, start: 2, badge: 'equipo', hint: 'Brisa tiene 2 de 3 integrantes. Hay una solicitud de colaboración esperando tu respuesta.', go: 'request', cta: 'Ver solicitud' },
     { id: 'q5', title: 'Organiza una sesión para enseñar algo que dominas', goal: 1, start: 0, badge: 'maestro', hint: 'Propón un taller, una charla corta o una sesión de trabajo.', go: 'propose', cta: 'Proponer sesión' },
-    { id: 'q6', title: 'Regístrate a tu primer Build Night', goal: 1, start: 0, badge: 'noche', hint: 'Los jueves en La Bodega: trabajas, pides ayuda y muestras avances.', go: 'events', cta: 'Ver Build Night' }
+    { id: 'q6', title: 'Regístrate a tu primer Build Night', goal: 1, start: 0, badge: 'noche', hint: 'Los jueves en Cervecería Averno: trabajas, pides ayuda y muestras avances.', go: 'events', cta: 'Ver Build Night' }
   ];
 
   const badges = {

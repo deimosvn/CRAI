@@ -369,6 +369,11 @@
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
 .ticket-grid small { display: block; font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--night-ink-2); margin-bottom: 3px; }
 .ticket-grid b { font-weight: 600; font-size: 15px; }
+.ticket-place { grid-column: 1 / -1; }
+.ticket-place span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--night-ink-2); }
+.ticket-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ticket-actions .btn:not(.btn-sol) { background: transparent; color: var(--night-ink); border-color: color-mix(in srgb, var(--night-ink) 30%, transparent); }
+.ticket-actions .btn:not(.btn-sol):hover { border-color: var(--night-ink); }
 .ticket-stub { position: relative; border-left: 2px dashed rgba(239, 235, 255, .25); display: grid; place-items: center; align-content: center; gap: 12px; padding: 18px 10px; text-align: center; }
 .ticket-stub::before, .ticket-stub::after { content: ""; position: absolute; left: -13px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg); }
 .ticket-stub::before { top: -12px; } .ticket-stub::after { bottom: -12px; }

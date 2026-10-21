@@ -13,13 +13,14 @@
 - [x] Reglas de Firestore con pruebas automáticas (registro, publicaciones, mensajes, admin, bloqueos y borrado).
 - [x] Celular: barra inferior en la app con menú «Más», menú en la landing, paneles como hojas desde abajo, campos de 16 px (sin zoom en iPhone), sin desbordes horizontales.
 - [x] Aviso de privacidad y condiciones de uso (`privacidad.html`), enlazado desde el registro, el pie y Mi perfil.
-- [x] Imagen para compartir en redes, íconos para «agregar a inicio», `robots.txt`, `sitemap.xml` y página 404.
+- [x] Imagen para compartir en redes (`og-cover.jpg`, 1200×630, menos de 100 KB para que WhatsApp la muestre), íconos para «agregar a inicio», `robots.txt`, `sitemap.xml` y página 404.
+- [x] CRAI Build Night: cada jueves de 19:00 a 22:00 en Cervecería Averno (Av. República de Brasil 115, Cuauhtémoc Norte), con «Cómo llegar» y la fecha del próximo jueves.
 - [x] La landing ya no presenta datos de ejemplo como reales (evento, lugar, «datos de ejemplo» en el pie).
 
 ## Pendiente de decidir o configurar (fuera del código)
 
 - [ ] **Correo de contacto del club:** ponlo en `contactEmail` de `public/assets/js/core/config.js`. Aparece en el aviso de privacidad y en Mi perfil.
-- [ ] **Primer CRAI Build Night:** cuando haya fecha y lugar, actualiza la sección IRL de `public/index.html`.
+- [ ] **Vista previa en redes:** si un enlace ya se compartió antes, Facebook y WhatsApp guardan la imagen vieja; se refresca en https://developers.facebook.com/tools/debug/ («Volver a extraer»).
 - [ ] **Revisión legal:** el aviso de privacidad es una base clara; conviene que lo revise alguien con experiencia en la LFPDPPP.
 - [ ] **Plantillas de correo de Firebase** en español (Authentication › Templates).
 - [ ] **GitHub Pages del repositorio CRAI:** opcional, cambiar la fuente a GitHub Actions (ver `docs/DEPLOY.md`).

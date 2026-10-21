@@ -171,6 +171,17 @@
     list.innerHTML = `<p class="fine">«Necesito a alguien que sepa de firmware y alguien que sepa vender»</p>` + picks.map((r) =>
       `<div class="match-row">${C.avatar(r.p, 'sm')}<div><b>${esc(r.p.name)}</b><small>${esc(r.why[0] || '')}</small></div><span class="pct">${r.s}%</span></div>`).join('');
   }
+  /* ---------- Build Night: cada jueves en Cervecería Averno ---------- */
+  // Muestra el próximo jueves; pasadas las 22:00 del jueves, el de la semana siguiente.
+  function buildNightDates() {
+    const d = C.eventDate({ dow: 4, weeks: 0 });
+    if (C.dayDiff(d) === 0 && C.mxl().hh >= 22) d.setDate(d.getDate() + 7);
+    const td = $('#ticketDate');
+    if (td) td.textContent = C.dayDiff(d) === 0 ? 'Hoy · ' + C.fmtLong(d).toLowerCase() : C.fmtLong(d);
+    const day = $('#miniTicketDay');
+    if (day) day.textContent = d.getDate();
+  }
+
   /* ---------- Weekly Loop: carátula ---------- */
   const polar = (cx, cy, r, deg) => { const a = (deg * Math.PI) / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
   const arc = (cx, cy, R, r, a1, a2) => {
@@ -460,6 +471,7 @@
     flipStack();
     typeReel();
     miniMatch();
+    buildNightDates();
     dial();
     seats();
     bindApply();
