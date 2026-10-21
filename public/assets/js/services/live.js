@@ -38,9 +38,23 @@
     'auth/network-request-failed': 'Sin conexión. Revisa tu internet.',
     'auth/operation-not-allowed': 'Este método de acceso todavía no está activado en el proyecto.',
     'auth/unauthorized-domain': 'Este dominio no está autorizado en Firebase Authentication.',
+    'auth/popup-blocked': 'Tu navegador bloqueó la ventana de Google. Permite ventanas emergentes o entra con tu correo.',
+    'auth/web-storage-unsupported': 'Tu navegador no permite guardar la sesión. Abre la página en Safari o Chrome.',
+    'auth/internal-error': 'Google no respondió. Si estás dentro de Instagram o Facebook, abre la página en tu navegador.',
+    'auth/user-disabled': 'Esta cuenta está desactivada.',
+    'auth/account-exists-with-different-credential': 'Ese correo ya está registrado con otro método. Entra con tu correo y contraseña.',
+    'auth/requires-recent-login': 'Por seguridad, cierra sesión, vuelve a entrar y repite la acción.',
     'permission-denied': 'No tienes permiso para hacer esto.',
     unavailable: 'Sin conexión con la base de datos. Intenta de nuevo.'
   };
+  // Navegadores dentro de apps (Instagram, Facebook, TikTok…): Google no deja iniciar sesión ahí.
+  const UA = navigator.userAgent || '';
+  const IN_APP = /Instagram|FBAN|FBAV|FB_IAB|FBIOS|Line\/|TikTok|musical_ly|BytedanceWebview|LinkedInApp|Snapchat|Twitter/i.test(UA) || (/Android/.test(UA) && /; wv\)/.test(UA));
+  const siteLink = () => location.origin + location.pathname.replace(/index\.html$/, '');
+  const INTENT_KEY = 'crai.intent';
+  const keepIntent = () => { try { sessionStorage.setItem(INTENT_KEY, JSON.stringify(intent || { view: 'inicio' })); } catch (e) { /* sin almacenamiento */ } };
+  const dropIntent = () => { try { sessionStorage.removeItem(INTENT_KEY); } catch (e) { /* nada */ } };
+  let pendingName = '';
   const errMsg = (e) => ERR[e && e.code] || 'Algo salió mal. Intenta de nuevo.';
   const onErr = (e) => {
     if (window.console) console.warn('CRAI', e);
@@ -139,7 +153,17 @@
     unsubs.push(fb.watchOutbox(uid, (rows) => {
       rows.forEach((r) => { if (r.toId && !S.contacted.includes(r.toId)) S.contacted.push(r.toId); });
     }, onErr));
+    if (C.isAdmin()) {
+      const adminView = () => { if (S.view === 'admin') softRender(); };
+      unsubs.push(fb.watchReports((rows) => { S.admin.reports = rows.map((r) => ({ ...r, ts: fb.ts(r.createdAt) })); adminView(); }, onErr));
+      unsubs.push(fb.watchApplications((rows) => { S.admin.apps = rows.map((r) => ({ ...r, uid: r.id, ts: fb.ts(r.createdAt) })).sort((a, b) => b.ts - a.ts); adminView(); }, onErr));
+      unsubs.push(fb.watchBans((rows) => { S.admin.bans = rows.map((r) => ({ ...r, uid: r.id, ts: fb.ts(r.createdAt) })).sort((a, b) => b.ts - a.ts); adminView(); }, onErr));
+    }
   }
+  // Administración: correo verificado que esté en la lista de config.js (las reglas lo vuelven a comprobar).
+  const ADMINS = ((window.CRAI_CONFIG || {}).admins || []).map((m) => String(m).toLowerCase());
+  S.admin = { reports: [], apps: [], bans: [] };
+  C.isAdmin = () => !!(S.auth.user && S.auth.user.emailVerified && ADMINS.includes(String(S.auth.user.email || '').toLowerCase()));
 
   // Repinta sin interrumpir a quien está escribiendo.
   let dirty = false;
@@ -162,8 +186,10 @@
     $$('[data-act="notifs"]').forEach((b) => b.classList.toggle('has-dot', C.unread() > 0));
   }
   function updateTopbar() {
-    $$('#topbar [data-go="inicio"]').forEach((b) => { b.textContent = S.auth.user ? 'Mi club' : 'Entrar'; });
-    $$('.foot-grid [data-go="inicio"]').forEach((b) => { b.textContent = 'Entrar al club'; });
+    const signed = !!S.auth.user;
+    $$('#topbar [data-act="login"]').forEach((b) => { b.hidden = signed; });
+    $$('#topbar [data-act="join"]').forEach((b) => { b.textContent = signed ? 'Mi club' : 'Únete'; });
+    $$('.foot-grid [data-act="login"]').forEach((b) => { b.textContent = signed ? 'Ir a mi club' : 'Entrar al club'; });
   }
   C.afterRender = () => {
     if (!C.isLive()) return;
@@ -208,27 +234,37 @@
       <div class="m-body">
         <div class="auth-crowd" aria-hidden="true">${['valeria', 'ivan', 'mariana', 'salvador', 'ximena'].map((id) => C.avatar(C.person(id), 'md')).join('')}</div>
         <p class="muted">${esc(authMsg || (up ? 'Crea tu cuenta para armar tu perfil, publicar y conectar con quienes construyen en Mexicali.' : 'Qué bueno verte de vuelta.'))}</p>
-        <button type="button" class="btn btn-lg auth-google" data-act="auth-google">${GOOGLE}Continuar con Google</button>
-        <div class="auth-or"><span>o con tu correo</span></div>
+        ${IN_APP ? `<div class="auth-inapp">${icon('info')}<span><b>Estás dentro de una app</b> (Instagram, Facebook o similar). Google no permite entrar desde aquí: usa tu correo, o abre la página en Safari o Chrome.</span><button type="button" class="btn btn-sm" data-act="copy-link" data-link="${esc(siteLink())}">${icon('link')}Copiar enlace</button></div>`
+          : `<button type="button" class="btn btn-lg auth-google" data-act="auth-google">${GOOGLE}Continuar con Google</button>`}
+        <div class="auth-or"><span>${IN_APP ? 'entra con tu correo' : 'o con tu correo'}</span></div>
         <form data-form="auth-email" class="auth-form" novalidate>
-          ${up ? '<label class="fld"><span>Tu nombre</span><input class="inp" id="authName" name="name" autocomplete="name" maxlength="60"></label>' : ''}
-          <label class="fld"><span>Correo</span><input class="inp" id="authEmail" name="email" type="email" autocomplete="email" autofocus></label>
+          ${up ? '<label class="fld"><span>Tu nombre</span><input class="inp" id="authName" name="name" autocomplete="name" maxlength="60" autofocus></label>' : ''}
+          <label class="fld"><span>Correo</span><input class="inp" id="authEmail" name="email" type="email" inputmode="email" autocapitalize="off" autocomplete="email"${up ? '' : ' autofocus'}></label>
           <label class="fld"><span>Contraseña</span><input class="inp" id="authPass" name="password" type="password" autocomplete="${up ? 'new-password' : 'current-password'}">${up ? '<small>Mínimo 6 caracteres.</small>' : ''}</label>
           <p class="auth-err" id="authErr" role="alert"></p>
           <button class="btn btn-primary btn-lg" type="submit">${up ? 'Crear cuenta' : 'Entrar'}</button>
         </form>
         <div class="auth-links"><button type="button" class="link-btn" data-act="auth-mode">${up ? '¿Ya tienes cuenta? Entra' : '¿Primera vez? Crea tu cuenta'}</button>${up ? '' : '<button type="button" class="link-btn" data-act="auth-reset">Olvidé mi contraseña</button>'}</div>
-        <p class="fine">Al crear tu cuenta aceptas las reglas del club: respeto, ayuda real y nada de spam.</p>
+        <p class="fine">Al ${up ? 'crear tu cuenta' : 'entrar'} aceptas las <a href="#reglas" data-act="nav-to" data-t="reglas">reglas del club</a> y el <a href="privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a>.</p>
       </div>
     </div>`;
   }
-  function openAuth(want, msg) {
+  function openAuth(want, msg, mode) {
     if (want) intent = want;
     authMsg = msg || '';
+    if (mode) authMode = mode;
     const top = C.topLayer && C.topLayer();
-    if (top && top.querySelector('.auth')) return;
-    C.openLayer('modal', authHTML(), { label: 'Entrar a CRAI' });
+    if (top && top.querySelector('.auth')) { const p = authPanel(); if (p && mode) p.innerHTML = authHTML(); return; }
+    C.closeAll();
+    C.openLayer('modal', authHTML(), { label: authMode === 'signup' ? 'Únete a CRAI' : 'Entra a CRAI' });
   }
+  // «Únete» abre directo el registro y «Entrar» el inicio de sesión; con sesión, llevan al club.
+  C.openJoin = (mode = 'signup') => {
+    if (C.isLive()) { go0('inicio'); return; }
+    if (S.auth.user && !S.auth.profile) { intent = { view: 'inicio' }; flushPending(); return; }
+    if (!S.auth.ready || !fb) { authMode = mode; waitForFirebase({ view: 'inicio' }); return; }
+    openAuth({ view: 'inicio' }, '', mode);
+  };
   const authPanel = () => { const p = $('#layers .layer:last-child .modal'); return p && p.querySelector('.auth') ? p : null; };
   const authError = (msg) => { const el = $('#authErr'); if (el) el.textContent = msg; };
 
@@ -241,7 +277,7 @@
       C.store.scope(null);
       C.reloadLocal();
       S.me = Object.assign({}, JSON.parse(JSON.stringify(D.me)), C.store.get('me', {}));
-      S.liveMembers = []; S.liveById = {}; S.livePosts = []; S.inbox = []; S.liveComments = {};
+      S.liveMembers = []; S.liveById = {}; S.livePosts = []; S.inbox = []; S.liveComments = {}; S.admin = { reports: [], apps: [], bans: [] };
       S.auth.ready = true;
       updateTopbar();
       if (S.mode === 'app') C.go('landing');
@@ -251,7 +287,28 @@
     C.store.scope(user.uid);
     C.reloadLocal();
     let doc = null;
-    try { doc = await fb.getProfile(user.uid); } catch (e) { onErr(e); }
+    try { doc = await fb.getProfile(user.uid); } catch (e) {
+      // Sin conexión o error de permisos: no confundirlo con «todavía no tiene perfil».
+      onErr(e);
+      S.auth.ready = true;
+      intent = null;
+      dropIntent();
+      updateTopbar();
+      C.closeAll();
+      C.toast('No pudimos cargar tu perfil. Revisa tu conexión y recarga la página.', 'info');
+      return;
+    }
+    let banned = false;
+    try { banned = await fb.isBanned(user.uid); } catch (e) { /* sin acceso a la lista: se trata como no bloqueada */ }
+    if (banned) {
+      S.auth.ready = true;
+      intent = null;
+      dropIntent();
+      C.closeAll();
+      C.toast('El equipo de CRAI bloqueó esta cuenta. Si crees que es un error, escríbenos.', 'shield');
+      fb.signOut().catch(() => {});
+      return;
+    }
     if (doc) {
       setMe(doc, user);
       S.auth.profile = true;
@@ -261,6 +318,8 @@
     S.auth.ready = true;
     updateTopbar();
     flushPending();
+    const auth = authPanel();
+    if (auth) C.closeLayer(auth.closest('.layer'));
     if (S.auth.profile && S.mode === 'app') C.rerender();
   }
   function saveApplication() {
@@ -277,10 +336,11 @@
     if (!want) return;
     if (!S.auth.user) { openAuth(want); return; }
     intent = null;
+    dropIntent();
     if (want.apply) saveApplication();
     if (!S.auth.profile) {
       C.closeAll();
-      setTimeout(() => C.openOnboarding(want.door || (S.applied && S.applied.door) || 'both', null, { name: S.auth.user.displayName || '' }), 120);
+      setTimeout(() => C.openOnboarding(want.door || (S.applied && S.applied.door) || 'both', null, { name: S.auth.user.displayName || pendingName }), 120);
       return;
     }
     C.closeAll();
@@ -288,11 +348,17 @@
     go0(want.view || 'inicio');
   }
 
+  // Mientras Firebase carga, se guarda lo que la persona quería hacer; si nunca carga, se le avisa.
+  const waitForFirebase = (want) => {
+    intent = want;
+    if (S.auth.failed) C.toast('No pudimos conectar con el club. Revisa tu conexión o desactiva el bloqueador de contenido y recarga.', 'info');
+    else C.toast('Conectando con el club…', 'clock');
+  };
   // Todas las secciones del club piden sesión.
   C.go = (view, e, el) => {
     if (view === 'landing' || C.isLive()) return go0(view, e, el);
     const want = { view };
-    if (!S.auth.ready || !fb) { intent = want; C.toast('Conectando con el club…', 'clock'); return undefined; }
+    if (!S.auth.ready || !fb) { waitForFirebase(want); return undefined; }
     if (!S.auth.user) { openAuth(want); return undefined; }
     intent = want;
     flushPending();
@@ -300,10 +366,10 @@
   };
   const ob0 = C.openOnboarding;
   C.openOnboarding = (door, e, prefill) => {
-    if (S.auth.user && !S.auth.profile) return ob0(door, e, Object.assign({ name: S.auth.user.displayName || '' }, prefill || {}));
+    if (S.auth.user && !S.auth.profile) return ob0(door, e, Object.assign({ name: S.auth.user.displayName || pendingName }, prefill || {}));
     if (C.isLive()) return go0('inicio', e);
     const want = { door, view: 'inicio' };
-    if (!S.auth.ready || !fb) { intent = want; C.toast('Conectando con el club…', 'clock'); return undefined; }
+    if (!S.auth.ready || !fb) { waitForFirebase(want); return undefined; }
     openAuth(want);
     return undefined;
   };
@@ -311,7 +377,7 @@
     if (!S.auth.user || S.auth.profile) return false;
     const user = S.auth.user;
     const fresh = {
-      id: 'me', uid: user.uid, email: user.email || '', name: ob.name || user.displayName || 'Miembro', role: ob.role || 'Miembro fundador',
+      id: 'me', uid: user.uid, email: user.email || '', name: ob.name || user.displayName || pendingName || 'Miembro', role: ob.role || 'Miembro de CRAI',
       door: ob.door, building: ob.building, needsTags: ob.needs, offerTags: ob.offers, tags: ob.offers.slice(), seeking: ob.seeking,
       bio: '', skills: [], learn: [], offers: '', avail: ['tardes'], open: true, interests: [],
       links: { linkedin: '', github: '', web: '' }, privacy: { indexable: true, attendee: true },
@@ -358,7 +424,8 @@
     'auth-google': (el) => {
       authError('');
       busy(el, 'Abriendo Google…');
-      fb.google().catch((e) => { busy(el, null); authError(errMsg(e)); });
+      keepIntent();
+      fb.google().catch((e) => { busy(el, null); dropIntent(); authError(errMsg(e)); });
     },
     'auth-mode': () => { authMode = authMode === 'signup' ? 'signin' : 'signup'; const p = authPanel(); if (p) p.innerHTML = authHTML(); },
     'auth-reset': () => {
@@ -396,9 +463,42 @@
     },
     'toggle-demo': () => { S.showDemo = !S.showDemo; C.save(); C.rerender(); },
     invite: () => {
-      const text = `Te invito a CRAI Club, la comunidad de quienes construyen en Mexicali: ${location.origin + location.pathname}`;
-      const fail = () => C.toast(`Copia y comparte: ${esc(location.origin + location.pathname)}`, 'link');
+      const text = `Te invito a CRAI Club, la comunidad de quienes construyen en Mexicali: ${siteLink()}`;
+      const fail = () => C.toast(`Copia y comparte: ${esc(siteLink())}`, 'link');
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) { navigator.share({ title: 'CRAI Club', text, url: siteLink() }).catch(() => {}); return; }
       try { navigator.clipboard.writeText(text).then(() => C.toast('Invitación copiada. Pégala donde quieras.', 'link'), fail); } catch (e) { fail(); }
+    },
+    'change-pass': () => {
+      fb.reset(S.auth.user.email).then(() => C.toast('Te enviamos un enlace a tu correo para cambiar la contraseña.', 'send'))
+        .catch((e) => C.toast(esc(errMsg(e)), 'info'));
+    },
+    'resend-verify': (el) => {
+      busy(el, 'Enviando…');
+      fb.resendVerification().then(() => { busy(el, null); el.remove(); C.toast('Te enviamos otro correo de verificación.', 'send'); })
+        .catch((e) => { busy(el, null); C.toast(esc(errMsg(e)), 'info'); });
+    },
+    // Borrado de cuenta en dos toques: perfil, publicaciones, mensajes, solicitud y la cuenta misma.
+    'delete-account': (el) => {
+      if (el.dataset.armed !== '1') {
+        el.dataset.armed = '1';
+        el.innerHTML = `${icon('x')}Toca otra vez para borrar todo`;
+        setTimeout(() => { if (document.contains(el) && !el.disabled) { el.dataset.armed = ''; el.innerHTML = `${icon('x')}Eliminar mi cuenta`; } }, 5000);
+        return;
+      }
+      const uid = S.auth.user.uid;
+      busy(el, 'Borrando tu cuenta…');
+      stopWatchers();
+      fb.deleteAccount().then(() => {
+        C.store.scope(uid); C.store.clear(); C.store.scope(null);
+        C.toast('Borramos tu cuenta y tus datos del club.', 'check');
+      }).catch((e) => {
+        busy(el, null);
+        el.dataset.armed = '';
+        C.toast(e && e.code === 'auth/requires-recent-login'
+          ? 'Por seguridad, cierra sesión y vuelve a entrar; después elimina tu cuenta.'
+          : `No pudimos borrar tu cuenta: ${esc(errMsg(e))}`, 'info');
+        onUser(fb.currentUser());
+      });
     },
     report: (el) => {
       fb.report(S.auth.user.uid, el.dataset.id, 'perfil').then(() => C.toast('Gracias. El equipo revisará este perfil.', 'shield')).catch((e) => C.toast(esc(errMsg(e)), 'info'));
@@ -419,6 +519,7 @@
       if (pass.length < 6) { authError('La contraseña necesita al menos 6 caracteres.'); return; }
       authError('');
       const btn = f.querySelector('[type="submit"]');
+      if (up) pendingName = name.slice(0, 60);
       busy(btn, up ? 'Creando tu cuenta…' : 'Entrando…');
       (up ? fb.signUp(name, email, pass) : fb.signIn(email, pass)).catch((e) => { busy(btn, null); authError(errMsg(e)); });
     },
@@ -489,11 +590,17 @@
   if (h.indexOf('p-') === 0) {
     intent = { person: h.slice(2) };
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* nada */ }
+  } else {
+    // Vuelta de un inicio de sesión con redirección: retomar lo que la persona quería hacer.
+    try { const saved = JSON.parse(sessionStorage.getItem(INTENT_KEY) || 'null'); if (saved) intent = saved; } catch (e) { /* nada */ }
   }
   C.attachFirebase = (api) => {
     if (fb) return;
     fb = C.fb = api;
+    S.auth.failed = false;
     fb.onUser(onUser);
   };
   if (window.CRAI_FB) C.attachFirebase(window.CRAI_FB);
+  // Si el SDK no carga (sin red o bloqueado), los botones avisan en lugar de quedarse «conectando».
+  setTimeout(() => { if (!fb) S.auth.failed = true; }, 10000);
 })();

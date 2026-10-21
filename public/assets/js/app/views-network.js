@@ -49,7 +49,7 @@
         <button class="pa${saved ? ' on' : ''}" data-act="save-post" data-id="${p.id}" aria-pressed="${saved}">${icon('bookmark')}${saved ? 'Guardada' : 'Guardar'}</button>
         ${p.author !== 'me' ? `<button class="pa" data-act="contact" data-id="${a.id}">${icon('send')}Contactar</button>` : ''}
         ${helpable ? `<button class="pa strong" data-act="help-post" data-id="${p.id}">${icon('heart')}Puedo ayudar</button>` : ''}
-        ${p.live && p.author === 'me' ? `<button class="pa" data-act="delete-post" data-id="${p.id}">${icon('x')}Eliminar</button>` : ''}
+        ${p.live && (p.author === 'me' || (C.isAdmin && C.isAdmin())) ? `<button class="pa" data-act="delete-post" data-id="${p.id}">${icon('x')}${p.author === 'me' ? 'Eliminar' : 'Eliminar (admin)'}</button>` : ''}
       </footer>
       <div class="comments" id="cm-${p.id}" hidden>${comments.map(C.commentHTML).join('')}
         <form class="comment-form" data-form="comment" data-id="${p.id}"><input class="inp" name="text" id="ci-${p.id}" placeholder="Escribe un comentario útil…" maxlength="300" autocomplete="off" aria-label="Comentario"><button class="btn btn-primary btn-sm" type="submit">Enviar</button></form>
@@ -119,8 +119,10 @@
         <div class="week-stats">
           <button class="wstat" data-go="community"><b>${replies}</b>respuestas a tus publicaciones</button>
           ${C.isLive() ? `<button class="wstat" data-act="notifs"><b>${C.unread ? C.unread() : 0}</b>mensajes nuevos</button>` : `<button class="wstat" data-act="request"><b>${S.accepted ? 0 : 1}</b>solicitud de colaboración</button>`}
-          <button class="wstat" data-go="events"><b>${week.length}</b>eventos esta semana</button>
-          <button class="wstat" data-go="projects"><b>${S.follows.size}</b>proyectos que sigues</button>
+          ${C.isLive() ? `<button class="wstat" data-go="people"><b>${S.liveMembers.length + 1}</b>${S.liveMembers.length ? 'miembros en el club' : 'miembro en el club'}</button>
+          <button class="wstat" data-go="community"><b>${S.livePosts.filter((p) => Date.now() - p.ts < 7 * 864e5).length}</b>publicaciones esta semana</button>`
+            : `<button class="wstat" data-go="events"><b>${week.length}</b>eventos esta semana</button>
+          <button class="wstat" data-go="projects"><b>${S.follows.size}</b>proyectos que sigues</button>`}
         </div>
       </section>
       <div class="split">

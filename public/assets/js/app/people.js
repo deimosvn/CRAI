@@ -39,9 +39,9 @@
         <div class="hc-id">${C.avatar(p, 'lg', { presence: true })}<div><b>${esc(p.name)}</b><small>${esc(p.role)}</small></div>${fit && fit.s >= 40 ? `<span class="pct" title="Compatibilidad contigo">${fit.s}%</span>` : ''}</div>
         <p class="hc-build">${icon('build')}<span>${esc(C.projectName(p))}</span></p>
         <div class="hc-grid"><div><span class="lbl">Necesita</span><div class="chips">${C.tagChips(p.needsTags, 'need', 2)}</div></div><div><span class="lbl">Aporta</span><div class="chips">${C.tagChips(p.offerTags, 'offer', 2)}</div></div></div>
-        <div class="hc-meta"><span>${icon('clock')}${esc(p.reply || 'Responde pronto')}</span><span>${icon('pin')}${esc(p.zone || 'Mexicali')}</span></div>
+        <div class="hc-meta">${p.reply ? `<span>${icon('clock')}${esc(p.reply)}</span>` : p.prefers ? `<span>${icon(PREF_ICON[p.prefers] || 'coffee')}${esc(p.prefers)}</span>` : ''}<span>${icon('pin')}${esc(p.zone || 'Mexicali')}</span></div>
         ${common.length ? `<p class="hc-common">${icon('spark')}<span>En común: ${esc(C.list(common))}.</span></p>` : ''}
-        <div class="hc-actions">${isMe ? '<button class="btn btn-sm btn-primary" data-go="perfil">Editar mi perfil</button>' : `<button class="btn btn-sm btn-door" data-act="contact" data-id="${p.id}">${icon('send')}Presentarme</button>`}
+        <div class="hc-actions">${isMe ? '<button class="btn btn-sm btn-primary" data-act="edit-profile">Editar mi perfil</button>' : `<button class="btn btn-sm btn-door" data-act="contact" data-id="${p.id}">${icon('send')}Presentarme</button>`}
           <button class="btn btn-sm" data-act="person" data-id="${p.id}">Ver perfil</button>
           <button class="icon-btn hc-card" data-act="bizcard" data-id="${p.id}" aria-label="Ver tarjeta de presentación" title="Tarjeta de presentación">${icon('briefcase')}</button></div>
       </div>`;
@@ -97,12 +97,17 @@
   doc.addEventListener('click', (e) => { if (e.target.closest('#hovercard [data-act], #hovercard [data-go]')) setTimeout(C.hideHC, 0); }, true);
 
   /* =================== Perfil completo =================== */
+  const LINK_LABEL = { linkedin: 'LinkedIn', github: 'GitHub', web: 'Portafolio' };
+  // Los perfiles reales abren su enlace; los de ejemplo solo avisan que son de muestra.
+  const linkChip = (p, k, v) => (p.live || (p.id === 'me' && C.isLive())
+    ? `<a class="chip chip-skill" href="${esc(C.safeUrl(v))}" target="_blank" rel="noopener noreferrer nofollow">${icon('link')}${LINK_LABEL[k] || 'Enlace'}</a>`
+    : `<button class="chip chip-skill" data-act="demo-link">${icon('link')}${LINK_LABEL[k] || 'Enlace'}</button>`);
   function profileTab(p) {
     const isMe = p.id === 'me';
     const fit = fitOf(p.id);
     const pr = p.projectId && C.project(p.projectId);
     const sh = isMe ? null : C.sharedWith(p);
-    const links = Object.entries(p.links || {}).filter(([, v]) => v);
+    const links = Object.entries(p.links || {}).filter(([, v]) => v && (!(p.live || isMe) || C.safeUrl(v)));
     const badges = isMe ? C.unlockedBadges() : p.badges || [];
     const hasCommon = sh && (sh.interests.length || sh.events.length || sh.offers.length || sh.gets.length);
     return `
@@ -131,8 +136,8 @@
         ${sh.events.map((e) => `<li>${icon('cal')}<span>Los dos van a <b>${esc(e.title)}</b></span></li>`).join('')}
       </ul></div>` : ''}
       ${badges.length ? `<div class="d-sec"><h3>Insignias</h3><div class="mini-badges">${badges.map((b) => `<span class="mini-badge"><span class="hex t-${D.badges[b].tone}">${icon(D.badges[b].icon)}</span><small>${esc(D.badges[b].name)}</small></span>`).join('')}</div></div>` : ''}
-      <div class="d-sec"><h3>Enlaces</h3><div class="chips">${links.length ? links.map(([k]) => `<button class="chip chip-skill" data-act="demo-link">${icon('link')}${{ linkedin: 'LinkedIn', github: 'GitHub', web: 'Portafolio' }[k]}</button>`).join('') : '<span class="fine">Sin enlaces todavía.</span>'}</div></div>
-      ${isMe ? '' : `<div class="d-sec"><p class="fine">¿Algo no está bien con este perfil? <button class="link-btn" data-act="report" data-id="${p.id}">Bloquear o denunciar</button></p></div>`}`;
+      <div class="d-sec"><h3>Enlaces</h3><div class="chips">${links.length ? links.map(([k, v]) => linkChip(p, k, v)).join('') : '<span class="fine">Sin enlaces todavía.</span>'}</div></div>
+      ${isMe ? '' : `<div class="d-sec"><p class="fine">¿Algo no está bien con este perfil? <button class="link-btn" data-act="report" data-id="${p.id}">Denunciar este perfil</button></p></div>`}`;
   }
   function activityTab(p) {
     const posts = C.allPosts().filter((x) => x.author === p.id).slice(0, 4);
@@ -169,7 +174,7 @@
         <div class="pd-id"><h2>${esc(p.name)}</h2><p>${esc(p.role)}</p>
           <div class="pd-tags">${C.doorChip(p.door)}<span class="open-dot${p.open ? '' : ' off'}">${p.open ? 'Open to collaborate' : 'Sin disponibilidad'}</span>${p.active ? '<span class="chip chip-mint">Activo hoy</span>' : ''}</div></div>
         <div class="pd-actions">
-          ${isMe ? `<button class="btn btn-primary" data-go="perfil">${icon('edit')}Editar mi perfil</button>`
+          ${isMe ? `<button class="btn btn-primary" data-act="edit-profile">${icon('edit')}Editar mi perfil</button>`
             : contacted ? `<span class="btn is-on">${icon('check')}Mensaje enviado</span>` : `<button class="btn btn-door" data-act="contact" data-id="${id}">${icon('send')}Presentarme</button>`}
           ${isMe ? '' : `<button class="btn${following ? ' is-on' : ''}" data-act="follow-person" data-id="${id}" aria-pressed="${following}">${following ? icon('check') + 'Siguiendo' : icon('plus') + 'Seguir'}</button>`}
           <button class="btn" data-act="bizcard" data-id="${id}">${icon('briefcase')}Tarjeta</button>
@@ -186,7 +191,7 @@
     const p = C.person(id);
     if (!p) return;
     const liveLink = C.isLive() && (p.live || p.id === 'me') && p.uid;
-    const handle = liveLink ? `${location.host}/#p-${p.uid}` : 'clubcrai.com/p/' + C.norm(p.name).replace(/[^a-z]+/g, '');
+    const handle = liveLink ? `${location.host}${location.pathname.replace(/index\.html$/, '')}#p-${p.uid}` : 'clubcrai.com/p/' + C.norm(p.name).replace(/[^a-z]+/g, '');
     const panel = C.openLayer('modal', `
       <header class="m-head"><h2>Tarjeta de presentación</h2><button class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></header>
       <div class="m-body bz-body">
@@ -206,7 +211,7 @@
         </div></div>
         <p class="fine bz-hint">${icon('refresh')}Toca la tarjeta para voltearla</p>
       </div>
-      <footer class="m-foot"><button class="btn" data-act="copy-link" data-link="${liveLink ? esc(location.origin + location.pathname + '#p-' + p.uid) : 'https://' + esc(handle)}">${icon('link')}Copiar enlace</button>${p.id === 'me' ? '<button class="btn btn-primary" data-go="perfil">Editar mi tarjeta</button>' : `<button class="btn btn-door" data-act="contact" data-id="${p.id}">${icon('send')}Presentarme</button>`}</footer>`,
+      <footer class="m-foot"><button class="btn" data-act="copy-link" data-link="${liveLink ? esc(location.origin + location.pathname + '#p-' + p.uid) : 'https://' + esc(handle)}">${icon('link')}Copiar enlace</button>${p.id === 'me' ? '<button class="btn btn-primary" data-act="edit-profile">Editar mi tarjeta</button>' : `<button class="btn btn-door" data-act="contact" data-id="${p.id}">${icon('send')}Presentarme</button>`}</footer>`,
     { label: 'Tarjeta de ' + p.name, cls: 'bz-modal' });
     C.tilt(panel.querySelector('.bz-zone'), 12);
   };
@@ -218,8 +223,9 @@
     const fit = fitOf(id);
     const sh = C.sharedWith(p);
     const pref = PREF_KEY[p.prefers] || 'cafe';
-    const reason = (ctx.reason || (fit && fit.hit[0] ? C.tagLabel(fit.hit[0]) : p.skills[0]) || '').toLowerCase();
-    const text = ctx.text || `Hola ${C.firstName(p)}, soy ${C.firstName(S.me)}. Estoy construyendo ${C.projectName(S.me)} y vi que sabes de ${reason}. ${C.FORMATS[pref]} Si no es buen momento, no pasa nada.`;
+    const reason = (ctx.reason || (fit && fit.hit[0] ? C.tagLabel(fit.hit[0]) : (p.offerTags || [])[0] ? C.tagLabel(p.offerTags[0]) : (p.skills || [])[0]) || '').toLowerCase();
+    const why = reason ? ` y vi que sabes de ${reason}` : '';
+    const text = ctx.text || `Hola ${C.firstName(p)}, soy ${C.firstName(S.me)}. Estoy construyendo ${C.projectName(S.me)}${why}. ${C.FORMATS[pref]} Si no es buen momento, no pasa nada.`;
     const points = [];
     if (fit) fit.hit.filter((t) => t !== 'testers').slice(0, 2).forEach((t) => points.push([`Su experiencia en ${lower(t)}`, `Tu experiencia en ${lower(t)} es justo lo que me falta.`]));
     sh.offers.slice(0, 1).forEach((t) => points.push([`Puedes aportarle ${lower(t)}`, `A cambio, te puedo echar la mano con ${lower(t)}.`]));
@@ -278,7 +284,7 @@
   };
 
   /* =================== Acciones y formularios =================== */
-  C.extraActions = {
+  C.extraActions = Object.assign(C.extraActions || {}, {
     contact: (el) => C.openContact(el.dataset.id, { reason: el.dataset.reason }),
     bizcard: (el) => C.openBizcard(el.dataset.id),
     flip: (el) => { el.classList.remove('intro'); const on = el.classList.toggle('flipped'); el.setAttribute('aria-pressed', String(on)); },
@@ -316,8 +322,8 @@
       const fail = () => C.toast(`Copia el enlace: ${esc(link)}`, 'link');
       try { navigator.clipboard.writeText(link).then(done, fail); } catch (e) { fail(); }
     }
-  };
-  C.extraForms = {
+  });
+  C.extraForms = Object.assign(C.extraForms || {}, {
     contact: (f) => {
       const id = f.dataset.id;
       const p = C.person(id);
@@ -342,5 +348,5 @@
       C.toast(`Publicaste una recomendación para ${esc(C.firstName(C.person(id)))}.`, 'star');
       if (C.refreshLayers) C.refreshLayers();
     }
-  };
+  });
 })();

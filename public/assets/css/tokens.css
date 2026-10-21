@@ -1,0 +1,102 @@
+/* =====================================================================
+   CRAI CLUB · clubcrai.com
+   Layout: "Una ciudad, dos puertas" — hero partido día/noche (Founders /
+   Underground) sobre un mismo horizonte; la app es riel compacto +
+   columna central + columna de contexto.
+   ===================================================================== */
+:root {
+  /* Color · cielo de Mexicali: cobalto = confianza, sol = Founders,
+     violeta nocturno = Underground, menta = logro */
+  --bg: #F3F5FA;
+  --bg-2: #E8ECF4;
+  --surface: #FFFFFF;
+  --surface-2: #F7F9FC;
+  --raise: #FFFFFF;
+  --ink: #0D1424;
+  --ink-2: #283149;
+  --muted: #5A6479;
+  --faint: #8790A4;
+  --line: rgba(13, 20, 36, .09);
+  --line-2: rgba(13, 20, 36, .16);
+
+  --blue: #2F5BEA;  --blue-ink: #2347C4;  --blue-soft: rgba(47, 91, 234, .10);  --blue-fill: #2F5BEA;
+  --sol: #F2762E;   --sol-ink: #A84A0E;   --sol-soft: rgba(242, 118, 46, .13);  --sol-fill: #F58A47;  --sol-text: #DA5E16;
+  --under: #6E52F5; --under-ink: #5235D6; --under-soft: rgba(110, 82, 245, .11); --under-fill: #6E52F5;
+  --mint: #0E9F74;  --mint-ink: #0A7A58;  --mint-soft: rgba(14, 159, 116, .12);  --mint-fill: #2CC491;
+  --danger: #C2364B;  --danger-soft: rgba(194, 54, 75, .1);
+  --rose: #D9445B;  --rose-soft: rgba(217, 68, 91, .10);
+  --on-fill: #FFFFFF;
+  --on-sol: #241006;
+  --on-mint: #03261A;
+
+  --door: var(--blue); --door-ink: var(--blue-ink); --door-soft: var(--blue-soft); --door-fill: var(--blue-fill); --on-door: var(--on-fill);
+
+  --glass: rgba(243, 245, 250, .78);
+  --scrim: rgba(9, 13, 24, .45);
+  --spot-c: rgba(47, 91, 234, .07);
+  --shadow-sm: 0 1px 2px rgba(13, 20, 36, .06);
+  --shadow: 0 1px 2px rgba(13, 20, 36, .05), 0 12px 30px -16px rgba(13, 20, 36, .24);
+  --shadow-lg: 0 34px 80px -34px rgba(13, 20, 36, .5);
+  --grain-o: .035;
+
+  /* Escenas de las dos puertas (iguales en ambos temas: el día siempre es día) */
+  --day-1: #FFF6EA; --day-2: #FFE0BD; --day-3: #FFBA86; --day-4: #F68E50;
+  --day-ink: #2A1407; --day-ink-2: #6E3C1C;
+  --night-1: #2D2878; --night-2: #15143F; --night-3: #070A1C;
+  --night-ink: #EFEBFF; --night-ink-2: #B8B0F0; --night-glow: #A390FF;
+  --ridge-back: rgba(70, 30, 70, .30); --ridge-front: rgba(22, 10, 36, .78);
+  --mark-ridge: #0B0F1E;
+
+  /* Tipo */
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Geist", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Forma y movimiento */
+  --r-xs: 6px; --r-sm: 10px; --r: 16px; --r-lg: 22px; --r-xl: 30px;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --gl: max(clamp(16px, 4vw, 40px), env(safe-area-inset-left, 0px));
+  --gr: max(clamp(16px, 4vw, 40px), env(safe-area-inset-right, 0px));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #080C16; --bg-2: #10162A; --surface: #10172A; --surface-2: #0C1222; --raise: #151D34;
+    --ink: #ECEFF7; --ink-2: #C7CEDD; --muted: #95A0B6; --faint: #687389;
+    --line: rgba(236, 239, 247, .08); --line-2: rgba(236, 239, 247, .15);
+    --blue: #7B96FF;  --blue-ink: #A3B6FF;  --blue-soft: rgba(123, 150, 255, .14);  --blue-fill: #3F62EE;
+    --sol: #FF9550;   --sol-ink: #FFB684;   --sol-soft: rgba(255, 149, 80, .14);   --sol-fill: #FF8C47;  --sol-text: #FF9A55;
+    --under: #A28FFF; --under-ink: #C0B3FF; --under-soft: rgba(162, 143, 255, .15); --under-fill: #7458F6;
+    --mint: #3DD6A3;  --mint-ink: #74E6C0;  --mint-soft: rgba(61, 214, 163, .14);  --mint-fill: #3DD6A3;
+    --danger: #FF8597;  --danger-soft: rgba(255, 133, 151, .12);
+    --rose: #FF6F86;  --rose-soft: rgba(255, 111, 134, .14);
+    --glass: rgba(8, 12, 22, .74); --scrim: rgba(2, 4, 10, .64); --spot-c: rgba(123, 150, 255, .09);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 14px 34px -18px rgba(0, 0, 0, .85);
+    --shadow-lg: 0 34px 90px -30px rgba(0, 0, 0, .9);
+    --grain-o: .05;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #080C16; --bg-2: #10162A; --surface: #10172A; --surface-2: #0C1222; --raise: #151D34;
+  --ink: #ECEFF7; --ink-2: #C7CEDD; --muted: #95A0B6; --faint: #687389;
+  --line: rgba(236, 239, 247, .08); --line-2: rgba(236, 239, 247, .15);
+  --blue: #7B96FF;  --blue-ink: #A3B6FF;  --blue-soft: rgba(123, 150, 255, .14);  --blue-fill: #3F62EE;
+  --sol: #FF9550;   --sol-ink: #FFB684;   --sol-soft: rgba(255, 149, 80, .14);   --sol-fill: #FF8C47;  --sol-text: #FF9A55;
+  --under: #A28FFF; --under-ink: #C0B3FF; --under-soft: rgba(162, 143, 255, .15); --under-fill: #7458F6;
+  --mint: #3DD6A3;  --mint-ink: #74E6C0;  --mint-soft: rgba(61, 214, 163, .14);  --mint-fill: #3DD6A3;
+    --danger: #FF8597;  --danger-soft: rgba(255, 133, 151, .12);
+  --rose: #FF6F86;  --rose-soft: rgba(255, 111, 134, .14);
+  --glass: rgba(8, 12, 22, .74); --scrim: rgba(2, 4, 10, .64); --spot-c: rgba(123, 150, 255, .09);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 14px 34px -18px rgba(0, 0, 0, .85);
+  --shadow-lg: 0 34px 90px -30px rgba(0, 0, 0, .9);
+  --grain-o: .05;
+  color-scheme: dark;
+}
+
+/* La puerta elegida tiñe la app */
+:root[data-door="founders"] { --door: var(--sol); --door-ink: var(--sol-ink); --door-soft: var(--sol-soft); --door-fill: var(--sol-fill); --on-door: var(--on-sol); }
+:root[data-door="underground"] { --door: var(--under); --door-ink: var(--under-ink); --door-soft: var(--under-soft); --door-fill: var(--under-fill); --on-door: var(--on-fill); }

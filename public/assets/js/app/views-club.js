@@ -173,22 +173,40 @@
       </div>
     </fieldset>`;
   };
+  // Cuenta real: correo, verificación, cerrar sesión y borrar la cuenta.
+  function accountCard() {
+    const u = S.auth.user;
+    const byEmail = (u.providerData || []).some((x) => x.providerId === 'password');
+    const contact = (window.CRAI_CONFIG || {}).contactEmail;
+    return `<div class="card session-card">
+        <div><small>Sesión iniciada</small><b>${esc(u.email || S.me.name)}</b>
+          ${byEmail && !u.emailVerified ? `<small class="verify-note">${icon('info')}Correo sin verificar · <button type="button" class="link-btn" data-act="resend-verify">Reenviar</button></small>` : ''}</div>
+        <button class="btn btn-sm" data-act="sign-out">${icon('exit')}Cerrar sesión</button>
+      </div>
+      ${C.isAdmin && C.isAdmin() ? `<button class="card admin-card" data-go="admin">${icon('shield')}<span><b>Panel de administración</b><small>Miembros, publicaciones, denuncias y solicitudes</small></span>${icon('chev')}</button>` : ''}
+      <details class="card danger-zone">
+        <summary>Privacidad y cuenta</summary>
+        ${byEmail ? `<p class="fine">¿Quieres cambiar tu contraseña? <button type="button" class="link-btn" data-act="change-pass">Te mandamos un enlace a tu correo</button>.</p>` : ''}
+        <p class="fine">Puedes borrar tu cuenta cuando quieras: se eliminan tu perfil, tus publicaciones, tus mensajes y tu solicitud. Lee el <a href="privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a>${contact ? ` o escríbenos a <a href="mailto:${esc(contact)}">${esc(contact)}</a>` : ''}.</p>
+        <button type="button" class="btn btn-sm btn-danger" data-act="delete-account">${icon('x')}Eliminar mi cuenta</button>
+      </details>`;
+  }
   const pick = (name, entries, selected, cls = '') => `<div class="pick ${cls}">${entries.map(([k, l]) => `<label><input type="checkbox" id="pf-${name}-${k}" data-bind="${name}" value="${k}" ${selected.includes(k) ? 'checked' : ''}><span>${esc(l)}</span></label>`).join('')}</div>`;
   V.perfil = {
     render() {
       const me = S.me;
       const tagEntries = Object.entries(D.TAGS).filter(([k]) => k !== 'testers');
       return `
-      <div class="vh"><div><p class="eyebrow">Mi perfil</p><h1>Tu tarjeta profesional viva</h1><p>Lo que construyes, lo que sabes, lo que buscas y lo que puedes aportar. Se actualiza mientras escribes.</p></div>
-        <div class="vh-actions"><span class="saved-ind" id="savedInd">${icon('check')}Guardado</span><button class="btn" data-act="bizcard" data-id="me">${icon('briefcase')}Mi tarjeta</button><button class="btn" data-act="person" data-id="me">${icon('eye')}Ver como me ven</button></div></div>
+      <div class="vh"><div><p class="eyebrow">Mi perfil</p><h1>Tu tarjeta profesional viva</h1><p>Edita tus datos aquí: lo que construyes, lo que sabes, lo que buscas y lo que puedes aportar. Todo se guarda solo mientras escribes.</p></div>
+        <div class="vh-actions"><span class="saved-ind" id="savedInd">${icon('check')}Guardado</span><button class="btn btn-primary" data-act="edit-profile">${icon('edit')}Editar mis datos</button><button class="btn" data-act="bizcard" data-id="me">${icon('briefcase')}Mi tarjeta</button><button class="btn" data-act="person" data-id="me">${icon('eye')}Ver como me ven</button></div></div>
       <div class="profile">
         <div class="profile-left">
           <div class="mcard-zone"><div class="mcard door-${me.door}" id="mcard">${C.mcardInner(me)}</div></div>
           <div class="card complete" id="complete">${C.completeHTML(me)}</div>
           <div class="card"><div class="card-h"><h3>Insignias</h3></div><div class="chips">${C.unlockedBadges().map((b) => `<span class="chip chip-${D.badges[b].tone}">${icon(D.badges[b].icon)}${esc(D.badges[b].name)}</span>`).join('')}</div></div>
-          ${C.isLive() ? `<div class="card session-card"><div><small>Sesión iniciada</small><b>${esc(S.auth.user.email || S.me.name)}</b></div><button class="btn btn-sm" data-act="sign-out">${icon('exit')}Cerrar sesión</button></div>` : `<button class="btn btn-ghost btn-sm" data-act="reset-demo" style="justify-self:start">${icon('refresh')}Restablecer la demo</button>`}
+          ${C.isLive() ? accountCard() : `<button class="btn btn-ghost btn-sm" data-act="reset-demo" style="justify-self:start">${icon('refresh')}Restablecer la demo</button>`}
         </div>
-        <form class="pform card" id="profileForm" autocomplete="off" style="padding:clamp(18px,2.4vw,28px)">
+        <form class="pform card" id="profileForm" data-form="profile" autocomplete="off" style="padding:clamp(18px,2.4vw,28px)">
           ${C.toonBuilderHTML(me)}
           <fieldset><legend>Quién eres</legend>
             <div class="pf-grid">
@@ -225,13 +243,14 @@
           </fieldset>
           <fieldset><legend>Enlaces</legend>
             <div class="pf-grid">
-              <label class="fld"><span>LinkedIn</span><input class="inp" id="pf-linkedin" data-bind="links.linkedin" value="${esc(me.links.linkedin)}" placeholder="https://"></label>
-              <label class="fld"><span>GitHub</span><input class="inp" id="pf-github" data-bind="links.github" value="${esc(me.links.github)}" placeholder="https://"></label>
+              <label class="fld"><span>LinkedIn</span><input class="inp" id="pf-linkedin" type="url" inputmode="url" autocapitalize="off" spellcheck="false" data-bind="links.linkedin" value="${esc(me.links.linkedin)}" placeholder="linkedin.com/in/tu-nombre" maxlength="200"></label>
+              <label class="fld"><span>GitHub</span><input class="inp" id="pf-github" type="url" inputmode="url" autocapitalize="off" spellcheck="false" data-bind="links.github" value="${esc(me.links.github)}" placeholder="github.com/tu-usuario" maxlength="200"></label>
             </div>
-            <label class="fld"><span>Portafolio o sitio</span><input class="inp" id="pf-web" data-bind="links.web" value="${esc(me.links.web)}" placeholder="https://"></label>
+            <label class="fld"><span>Portafolio o sitio</span><input class="inp" id="pf-web" type="url" inputmode="url" autocapitalize="off" spellcheck="false" data-bind="links.web" value="${esc(me.links.web)}" placeholder="tusitio.com" maxlength="200"></label>
           </fieldset>
           <fieldset><legend>Privacidad</legend>
-            <label class="toggle"><input type="checkbox" id="pf-index" data-bind="privacy.indexable" ${me.privacy.indexable ? 'checked' : ''}><i></i>Mi perfil público puede aparecer en buscadores</label>
+            ${C.isLive() ? `<p class="fine">${icon('lock')} Tu perfil solo lo ven personas con cuenta en CRAI. No aparece en buscadores.</p>`
+              : `<label class="toggle"><input type="checkbox" id="pf-index" data-bind="privacy.indexable" ${me.privacy.indexable ? 'checked' : ''}><i></i>Mi perfil público puede aparecer en buscadores</label>`}
             <label class="toggle"><input type="checkbox" id="pf-attendee" data-bind="privacy.attendee" ${me.privacy.attendee ? 'checked' : ''}><i></i>Aparezco en las listas de asistentes de eventos</label>
           </fieldset>
         </form>

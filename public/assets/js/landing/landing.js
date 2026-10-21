@@ -1,4 +1,4 @@
-/* CRAI Club · landing: puertas, señal, estrellas, semana, boleto y lugares */
+/* CRAI Club · landing: hero, puertas, estrellas, semana, lugares y menú móvil */
 (function () {
   'use strict';
   const C = window.CRAI;
@@ -12,30 +12,6 @@
   /* ---------- Reloj de Mexicali y barra superior ---------- */
   const tickClock = () => { const el = $('#clock'); if (el) el.textContent = 'MXL ' + C.mxl().time; };
   const onScroll = () => { const tb = $('#topbar'); if (tb) tb.classList.toggle('scrolled', window.scrollY > 8); };
-
-  /* ---------- «Necesito a alguien que…» con máquina de escribir ---------- */
-  const NEEDS = ['sepa de firmware para mi prototipo', 'venda B2B a parques industriales', 'diseñe la marca de mi café', 'me ayude a levantar inversión', 'quiera probar mi app', 'me enseñe a soldar', 'haga la música de mi videojuego'];
-  let needIdx = 0;
-  L.currentNeed = () => NEEDS[needIdx];
-  function typewriter() {
-    const input = $('#needInput');
-    if (!input || C.RM()) return;
-    let j = NEEDS[0].length;
-    let deleting = true;
-    const step = () => {
-      if (S.mode !== 'landing' || document.activeElement === input || input.value) { setTimeout(step, 900); return; }
-      if (deleting) {
-        j -= 2;
-        if (j <= 0) { j = 0; deleting = false; needIdx = (needIdx + 1) % NEEDS.length; }
-      } else {
-        j += 1;
-        if (j >= NEEDS[needIdx].length) { input.placeholder = NEEDS[needIdx]; deleting = true; setTimeout(step, 2300); return; }
-      }
-      input.placeholder = NEEDS[needIdx].slice(0, Math.max(0, j)) || ' ';
-      setTimeout(step, deleting ? 24 : 46 + Math.random() * 40);
-    };
-    setTimeout(step, 2600);
-  }
 
   /* ---------- Texto que se descifra (Underground) ---------- */
   function scramble(el) {
@@ -195,14 +171,6 @@
     list.innerHTML = `<p class="fine">«Necesito a alguien que sepa de firmware y alguien que sepa vender»</p>` + picks.map((r) =>
       `<div class="match-row">${C.avatar(r.p, 'sm')}<div><b>${esc(r.p.name)}</b><small>${esc(r.why[0] || '')}</small></div><span class="pct">${r.s}%</span></div>`).join('');
   }
-  function buildNightDates() {
-    const ev = C.eventById('bn08');
-    const d = C.eventDate(ev);
-    const el = $('#miniTicketDate'); if (el) el.textContent = `${C.fmtRel(d)} · 19:00 · La Bodega`;
-    const day = $('#miniTicketDay'); if (day) day.textContent = d.getDate();
-    const td = $('#ticketDate'); if (td) td.textContent = C.fmtLong(d);
-  }
-
   /* ---------- Weekly Loop: carátula ---------- */
   const polar = (cx, cy, r, deg) => { const a = (deg * Math.PI) / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
   const arc = (cx, cy, R, r, a1, a2) => {
@@ -316,13 +284,39 @@
       const name = String(fd.get('name') || '').trim();
       const building = String(fd.get('building') || '').trim();
       if (!name || !building) return;
-      S.applied = { name, building, need: String(fd.get('need') || '').trim(), door: String(fd.get('door') || 'both'), seat: 1 + Math.floor(Math.random() * 30) };
+      const live = !!window.CRAI_LIVE;
+      S.applied = { name, building, need: String(fd.get('need') || '').trim(), door: String(fd.get('door') || 'both'), seat: live ? 0 : 1 + Math.floor(Math.random() * 30) };
       C.save();
       seats();
       $$('.seat.lit').forEach((s) => s.animate && !C.RM() && s.animate([{ transform: 'scale(.3)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1.12)' }], { duration: 700, easing: 'cubic-bezier(.34,1.56,.64,1)' }));
-      C.toast(`Lugar ${String(S.applied.seat).padStart(2, '0')} apartado para ${esc(name)}`, 'sun');
+      C.toast(live ? `Recibimos tu proyecto, ${esc(name)}.` : `Lugar ${String(S.applied.seat).padStart(2, '0')} apartado para ${esc(name)}`, 'sun');
     });
   }
+
+  /* ---------- Menú del celular: secciones, entrar y tema ---------- */
+  const MENU = [['puertas', 'Las dos puertas'], ['preguntas', 'El club'], ['funciones', 'Funciones'], ['semana', 'La semana'], ['irl', 'IRL'], ['reglas', 'Reglas'], ['ruta', 'Ruta'], ['unete', 'Miembros fundadores']];
+  function menuHTML() {
+    const signed = S.auth && S.auth.user;
+    return `<header class="m-head"><h2>CRAI Club</h2><button type="button" class="icon-btn" data-act="close" aria-label="Cerrar menú">${C.icon('x')}</button></header>
+      <nav class="menu-list" aria-label="Secciones">${MENU.map(([id, l]) => `<button type="button" class="menu-link" data-act="nav-to" data-t="${id}">${esc(l)}${C.icon('chev')}</button>`).join('')}</nav>
+      <div class="menu-foot">
+        ${signed ? '<button type="button" class="btn btn-primary btn-lg" data-act="join">Ir a mi club</button>'
+          : '<button type="button" class="btn btn-primary btn-lg" data-act="join">Crear mi cuenta</button><button type="button" class="btn btn-lg" data-act="login">Ya tengo cuenta · Entrar</button>'}
+        <button type="button" class="btn btn-ghost" data-act="theme">${C.icon('sun', 'i-sun')}${C.icon('moon', 'i-moon')}Cambiar tema</button>
+      </div>`;
+  }
+  function mobileMenu() {
+    const btn = $('#menuBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => C.openLayer('modal', menuHTML(), { cls: 'menu-sheet', label: 'Menú' }));
+  }
+  C.extraActions = Object.assign(C.extraActions || {}, {
+    'nav-to': (el) => {
+      const t = document.getElementById(el.dataset.t);
+      C.closeAll();
+      if (t) setTimeout(() => t.scrollIntoView({ behavior: C.RM() ? 'auto' : 'smooth', block: 'start' }), 80);
+    }
+  });
 
   /* ---------- Botones magnéticos ---------- */
   function magnets() {
@@ -336,19 +330,7 @@
     });
   }
 
-  /* ---------- Búsqueda del hero ---------- */
-  function needbar() {
-    const form = $('[data-form="need-landing"]');
-    if (!form) return;
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const v = $('#needInput').value.trim();
-      S.match.q = v || L.currentNeed();
-      C.go('match', null, form.querySelector('button'));
-    });
-  }
-
-  /* ---------- Hero vivo: verbo rotativo, píldora, tarjetas flotantes, parallax y scroll ---------- */
+  /* ---------- Hero vivo: verbo rotativo, sol que sigue al cursor y salida al hacer scroll ---------- */
   const VERBS = [['construyen', 'c-blue'], ['diseñan', 'c-sol'], ['programan', 'c-under'], ['fabrican', 'c-sol'], ['lanzan', 'c-blue']];
   let verbIdx = 0;
   let heroVisible = true;
@@ -377,101 +359,29 @@
     const w0 = rot && rot.querySelector('.rot-word');
     if (w0 && $('#hlVerb')) rot.style.width = w0.offsetWidth + 'px';
   }
-  // Etiquetas tipo cursor alrededor del tablero, con los personajes viendo hacia el centro.
-  function cursorTags() {
-    $$('.ctag').forEach((el) => {
-      const p = C.person(el.dataset.person);
-      const left = el.classList.contains('ct-1');
-      el.innerHTML = `<div class="ctag-in"><svg class="ctag-arrow" viewBox="0 0 20 22"><path d="M2 2 18 9.5 10.5 11.6 7 20Z"/></svg><span class="ctag-pill"><span class="ctag-face">${C.toonSVG(p, { turn: left ? 1 : -1 })}</span><span><b>${esc(C.firstName(p))}</b><small>${esc(el.dataset.note || '')}</small></span></span></div>`;
-    });
-    const faces = $('#boardFaces');
-    if (faces) faces.innerHTML = ['ximena', 'salvador', 'camila'].map((id) => `<span class="bf">${C.toonSVG(C.person(id))}</span>`).join('');
-    const chips = $('#boardChips');
-    if (chips) chips.addEventListener('click', (e) => {
-      const b = e.target.closest('.bchip');
-      if (!b) return;
-      S.match.q = b.dataset.q;
-      C.go('match', e, b);
-    });
-  }
-  function heroPill() {
-    const el = $('#heroPill');
-    if (!el) return;
-    el.innerHTML = ['valeria', 'ivan', 'mariana', 'salvador'].map((id, i) => {
-      const p = C.person(id);
-      return `<span class="hp-av" style="--h:${p.hue};--i:${i}">${esc(C.initials(p.name))}</span>`;
-    }).join('') + '<span class="hp-txt"><i></i>Miembros fundadores</span>';
-    if (!C.RM()) { setTimeout(() => el.classList.add('peek'), 2700); setTimeout(() => el.classList.remove('peek'), 5600); }
-  }
-  let matchList = [];
-  let matchIdx = 0;
-  const matchBody = (r, cls) => `<div class="hf-body ${cls}"><div class="hf-pair">${C.avatar(S.me, 'sm')}<span class="hf-link"><i></i></span>${C.avatar(r.p, 'sm')}<b class="hf-pct">${r.s}%</b></div>
-      <p class="hf-title"><b>${esc(r.p.name)}</b> encaja con lo que buscas</p>
-      <p class="hf-sub">${esc(C.list(r.hit.map(C.tagLabel)))} · ${esc(r.p.reply || '')}</p></div>`;
-  function floats() {
-    const m = $('#hfMatch');
-    const ev = $('#hfEvent');
-    const chip = $('#hfChip');
-    if (!m) return;
-    matchList = C.matchPeople(S.me.needsTags || []).filter((r) => r.hit.length).slice(0, 4);
-    if (matchList.length) {
-      m.innerHTML = `<p class="hf-kicker"><span class="live-dot"></span>Collab Match<span class="hf-time">ahora</span></p>${matchBody(matchList[0], '')}`;
-      m.dataset.go = 'match';
-    }
-    if (ev) {
-    const e = C.eventById('bn08');
-    const g = C.goingOf ? C.goingOf(e) : e.going;
-    ev.innerHTML = `<p class="hf-kicker"><span class="live-dot"></span>IRL · ${esc(C.fmtRel(C.eventDate(e)))}</p>
-      <div class="hf-ev">${C.dateBlock(C.eventDate(e))}<div><p class="hf-title"><b>${esc(e.title)}</b></p><p class="hf-sub">${esc(e.time)} · ${esc(e.venue)}</p></div></div>
-      <div class="hf-foot"><span class="av-stack">${e.attendees.slice(0, 4).map((id) => C.avatar(C.person(id), 'xs')).join('')}</span><div class="bar under" style="--v:${Math.round((g / e.cap) * 100)}%"><i></i></div><span class="hf-sub tnum">${g}/${e.cap}</span></div>`;
-    ev.dataset.go = 'events';
-    }
-    if (chip) {
-    const l = C.todayLoop();
-    chip.innerHTML = `<span class="tdot tone-sol">${C.icon('sun')}</span>Hoy en el club · ${esc(l.name)}`;
-    chip.dataset.go = 'community';
-    }
-  }
-  function cycleMatch() {
-    if (matchList.length < 2 || S.mode !== 'landing' || document.hidden || !heroVisible || C.RM()) return;
-    const body = $('#hfMatch .hf-body');
-    if (!body) return;
-    body.classList.remove('swap-in');
-    body.classList.add('swap-out');
-    setTimeout(() => {
-      matchIdx = (matchIdx + 1) % matchList.length;
-      body.outerHTML = matchBody(matchList[matchIdx], 'swap-in');
-    }, 320);
-  }
   function heroMotion() {
     const hero = $('.hero');
     if (!hero || C.RM()) return;
-    const fl = $$('.hfloat', hero);
-    let px = 0;
-    let py = 0;
     let raf = 0;
+    let gx = 0;
     const apply = () => {
       raf = 0;
-      fl.forEach((f) => { const d = Number(f.dataset.depth) || 20; f.style.transform = `translate3d(${(-px * d).toFixed(1)}px, ${(-py * d).toFixed(1)}px, 0)`; });
+      const sun = $('.big-sun');
+      if (!sun) return;
+      const sr = sun.getBoundingClientRect();
+      sun.style.setProperty('--gx', Math.max(0, Math.min(100, ((gx - sr.left) / sr.width) * 100)).toFixed(1) + '%');
     };
     hero.addEventListener('pointermove', (e) => {
-      const r = hero.getBoundingClientRect();
-      px = (e.clientX - r.left) / r.width - 0.5;
-      py = (e.clientY - r.top) / r.height - 0.5;
-      hero.style.setProperty('--hx', Math.round(e.clientX - r.left) + 'px');
-      hero.style.setProperty('--hy', Math.round(e.clientY - r.top + 72) + 'px');
-      const sun = $('.big-sun');
-      if (sun) { const sr = sun.getBoundingClientRect(); sun.style.setProperty('--gx', Math.max(0, Math.min(100, ((e.clientX - sr.left) / sr.width) * 100)).toFixed(1) + '%'); }
+      gx = e.clientX;
       if (!raf) raf = requestAnimationFrame(apply);
     }, { passive: true });
-    hero.addEventListener('pointerleave', () => { px = 0; py = 0; if (!raf) raf = requestAnimationFrame(apply); });
     if ('IntersectionObserver' in window) new IntersectionObserver((es) => { heroVisible = es[0].isIntersecting; }).observe(hero);
   }
   let scrollRaf = 0;
   function heroScroll() {
     scrollRaf = 0;
     const head = $('#heroHead');
-    const stage = $('#boardStage') || $('#doorsStage');
+    const stage = $('#doorsStage');
     if (!head || !stage || S.mode !== 'landing' || C.RM()) return;
     const hp = Math.min(1, Math.max(0, window.scrollY / 540));
     head.style.transform = hp ? `translate3d(0, ${(-hp * 48).toFixed(1)}px, 0)` : '';
@@ -485,12 +395,6 @@
     } else stage.style.removeProperty('--ds');
   }
   const onHeroScroll = () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(heroScroll); };
-  function heroCrowd() {
-    const el = $('#heroCrowd');
-    if (!el) return;
-    const ids = ['valeria', 'ivan', 'mariana', 'rodrigo', 'salvador', 'ximena'];
-    el.innerHTML = `<span class="crowd-faces">${ids.map((id, i) => { const p = C.person(id); return `<span class="crowd-face" style="--i:${i}" title="${esc(p.role)}">${C.toonSVG(p)}</span>`; }).join('')}</span><span class="crowd-txt">Founders, makers y creadoras<br>construyendo en Mexicali</span>`;
-  }
   // Personajes del club en órbita alrededor del sol: detrás del sol arriba, al frente abajo.
   function sunOrbit() {
     const stage = $('#orbStage');
@@ -532,10 +436,6 @@
   }
   function liveHero() {
     sunOrbit();
-    cursorTags();
-    heroCrowd();
-    heroPill();
-    floats();
     heroMotion();
     heroScroll();
     window.addEventListener('scroll', onHeroScroll, { passive: true });
@@ -543,12 +443,11 @@
     if (C.RM()) return;
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitVerb); else setTimeout(fitVerb, 600);
     setTimeout(() => { setInterval(rotateVerb, 2900); }, 3400);
-    setInterval(cycleMatch, 4300);
   }
 
   L.pause = () => { stopLoop(); };
   L.resume = () => { sw = 0; sh = 0; requestAnimationFrame(() => { sizeStars(); startLoop(); }); };
-  L.refresh = () => { miniMatch(); floats(); };
+  L.refresh = () => { miniMatch(); };
 
   L.init = () => {
     applyMarkup = ($('#applyCard') || {}).innerHTML || '';
@@ -556,18 +455,16 @@
     setInterval(tickClock, 20000);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    typewriter();
     doors();
     liveHero();
     flipStack();
     typeReel();
     miniMatch();
-    buildNightDates();
     dial();
     seats();
     bindApply();
     magnets();
-    needbar();
+    mobileMenu();
     C.tilt($('#ticket'), 12);
     C.observeReveal($('#site'));
   };

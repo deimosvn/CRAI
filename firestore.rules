@@ -3,8 +3,11 @@ rules_version = '2';
 // Reglas de CRAI Club.
 // - Solo miembros con sesión iniciada pueden leer perfiles y publicaciones.
 // - Cada persona solo crea, edita o borra lo suyo.
-// - Las solicitudes de contacto solo las ven quien envía y quien recibe.
+// - Las solicitudes de contacto solo las ven quien envía y quien recibe (ni el equipo las lee).
+// - El equipo de administración modera: borra perfiles y publicaciones, revisa denuncias y
+//   solicitudes de fundadores, y bloquea cuentas.
 // - Todo lo que no aparece aquí queda bloqueado.
+// Pruebas: tests/firestore.rules.test.mjs (npm run test:rules).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,6 +15,14 @@ service cloud.firestore {
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
     function text(v, max) { return v is string && v.size() <= max; }
     function hasProfile() { return exists(/databases/$(database)/documents/profiles/$(request.auth.uid)); }
+    function notBanned() { return !exists(/databases/$(database)/documents/bans/$(request.auth.uid)); }
+    function member() { return signedIn() && hasProfile() && notBanned(); }
+    // Administración: correos verificados de esta lista. Para sumar a alguien, agrégalo aquí y en
+    // public/assets/js/core/config.js (admins), y vuelve a publicar las reglas.
+    function isAdmin() {
+      return signedIn() && request.auth.token.email_verified == true
+        && request.auth.token.email in ['diego.martinez111213@gmail.com'];
+    }
 
     function validProfile(d) {
       return d.keys().hasOnly(['name', 'role', 'door', 'building', 'bio', 'skills', 'learn', 'seeking', 'offers',
@@ -35,24 +46,32 @@ service cloud.firestore {
         && d.get('tags', []) is list && d.get('tags', []).size() <= 20
         && d.get('avail', []) is list && d.get('avail', []).size() <= 4
         && d.get('langs', []) is list && d.get('langs', []).size() <= 8
+        && d.get('interests', []) is list && d.get('interests', []).size() <= 20
         && d.get('open', true) is bool
+        && d.get('hue', 0) is number
+        && validLinks(d.get('links', {}))
+        && d.get('privacy', {}) is map && d.get('privacy', {}).keys().hasOnly(['indexable', 'attendee'])
         && d.get('toon', {}) is map && d.get('toon', {}).size() <= 20;
+    }
+    function validLinks(l) {
+      return l is map && l.keys().hasOnly(['linkedin', 'github', 'web'])
+        && text(l.get('linkedin', ''), 200) && text(l.get('github', ''), 200) && text(l.get('web', ''), 200);
     }
 
     // Perfiles de miembros
     match /profiles/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid) && validProfile(request.resource.data)
+      allow create: if isOwner(uid) && notBanned() && validProfile(request.resource.data)
         && request.resource.data.createdAt == request.time;
-      allow update: if isOwner(uid) && validProfile(request.resource.data)
+      allow update: if isOwner(uid) && notBanned() && validProfile(request.resource.data)
         && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null);
-      allow delete: if isOwner(uid);
+      allow delete: if isOwner(uid) || isAdmin();
     }
 
     // Publicaciones del feed
     match /posts/{postId} {
       allow read: if signedIn();
-      allow create: if signedIn() && hasProfile()
+      allow create: if member()
         && request.resource.data.keys().hasOnly(['type', 'text', 'tags', 'project', 'authorId', 'commentCount', 'createdAt'])
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.type in ['building', 'help', 'offer', 'opportunity', 'launched', 'team', 'ask']
@@ -62,26 +81,26 @@ service cloud.firestore {
         && request.resource.data.commentCount == 0
         && request.resource.data.createdAt == request.time;
       // Cualquier miembro puede sumar 1 al contador al comentar; nada más.
-      allow update: if signedIn()
+      allow update: if member()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
         && request.resource.data.commentCount == resource.data.commentCount + 1;
-      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if (signedIn() && resource.data.authorId == request.auth.uid) || isAdmin();
 
       match /comments/{commentId} {
         allow read: if signedIn();
-        allow create: if signedIn() && hasProfile()
+        allow create: if member()
           && request.resource.data.keys().hasOnly(['authorId', 'text', 'createdAt'])
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 300
           && request.resource.data.createdAt == request.time;
-        allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+        allow delete: if (signedIn() && resource.data.authorId == request.auth.uid) || isAdmin();
       }
     }
 
     // Solicitudes de primer contacto
     match /requests/{requestId} {
       allow read: if signedIn() && (resource.data.toId == request.auth.uid || resource.data.fromId == request.auth.uid);
-      allow create: if signedIn() && hasProfile()
+      allow create: if member()
         && request.resource.data.keys().hasOnly(['fromId', 'toId', 'text', 'fmt', 'read', 'createdAt'])
         && request.resource.data.fromId == request.auth.uid
         && request.resource.data.toId is string && request.resource.data.toId != request.auth.uid
@@ -92,23 +111,26 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       // Quien recibe solo puede marcarla como leída.
       allow update: if signedIn() && resource.data.toId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if false;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read == true;
+      // Se borran al eliminar la cuenta de quien envía o de quien recibe.
+      allow delete: if signedIn() && (resource.data.fromId == request.auth.uid || resource.data.toId == request.auth.uid);
     }
 
     // Solicitudes de miembros fundadores (formulario de la landing)
     match /applications/{uid} {
-      allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid)
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid) && notBanned()
         && request.resource.data.keys().hasOnly(['name', 'building', 'need', 'door', 'createdAt'])
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
         && text(request.resource.data.building, 160)
         && text(request.resource.data.get('need', ''), 160)
         && request.resource.data.door in ['founders', 'underground', 'both']
         && request.resource.data.createdAt == request.time;
+      allow delete: if isOwner(uid) || isAdmin();
     }
 
-    // Denuncias: se crean, pero solo se revisan desde la consola.
+    // Denuncias: cualquier miembro las crea; solo administración las lee y las resuelve.
     match /reports/{reportId} {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['reporterId', 'targetId', 'kind', 'createdAt'])
@@ -116,7 +138,21 @@ service cloud.firestore {
         && text(request.resource.data.targetId, 128)
         && text(request.resource.data.kind, 20)
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if false;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Cuentas bloqueadas: no pueden volver a crear perfil, publicar, comentar ni escribir.
+    match /bans/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isAdmin() && uid != request.auth.uid
+        && request.resource.data.keys().hasOnly(['by', 'name', 'reason', 'createdAt'])
+        && request.resource.data.by == request.auth.uid
+        && text(request.resource.data.get('name', ''), 60)
+        && text(request.resource.data.get('reason', ''), 200)
+        && request.resource.data.createdAt == request.time;
+      allow delete: if isAdmin();
+      allow update: if false;
     }
   }
 }

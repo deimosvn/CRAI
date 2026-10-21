@@ -10,22 +10,24 @@
   const icon = C.icon;
   const doc = document;
   const root = doc.documentElement;
-  const APP_VIEWS = ['inicio', 'people', 'projects', 'community', 'events', 'explore', 'match', 'quests', 'perfil', 'blueprint'];
+  const APP_VIEWS = ['inicio', 'people', 'projects', 'community', 'events', 'explore', 'match', 'quests', 'perfil', 'blueprint', 'admin'];
 
   const NAV = [
     { id: 'inicio', label: 'Inicio', icon: 'home' },
     { id: 'people', label: 'People', icon: 'users' },
     { id: 'projects', label: 'Projects', icon: 'box' },
-    { id: 'community', label: 'Community', icon: 'chat', badge: 3 },
+    { id: 'community', label: 'Community', icon: 'chat' },
     { id: 'events', label: 'Events', icon: 'cal' },
     { id: 'explore', label: 'Explore', icon: 'compass' },
     { sep: 'Conectar' },
     { id: 'match', label: 'Collab Match', icon: 'radar' },
     { id: 'quests', label: 'Quests', icon: 'flag' },
     { sep: 'Tú' },
-    { id: 'perfil', label: 'Mi perfil', icon: 'user' },
-    { id: 'blueprint', label: 'Blueprint', icon: 'layers' }
+    { id: 'perfil', label: 'Mi perfil', icon: 'user' }
   ];
+  // Blueprint (documento interno) sigue disponible en #blueprint, pero no aparece en la navegación.
+  // «Administración» solo aparece para las cuentas admin (ver config.js y firestore.rules).
+  const navItems = () => (C.isAdmin && C.isAdmin() ? [...NAV, { id: 'admin', label: 'Administración', icon: 'shield' }] : NAV);
 
   /* ---------- Shell ---------- */
   const railMe = () => `${C.avatar(S.me, 'sm')}<span><b>${esc(S.me.name)}</b><small>${esc(S.me.role)}</small></span>`;
@@ -33,7 +35,7 @@
     return `<div class="shell">
       <aside class="rail" aria-label="Navegación principal">
         <button class="rail-brand logo" data-go="landing" aria-label="Volver a clubcrai.com"><span class="logo-mark"></span><span>CRAI <em>CLUB</em></span></button>
-        <nav class="rail-nav">${NAV.map((n) => n.sep ? `<p class="nav-sep">${n.sep}</p>`
+        <nav class="rail-nav">${navItems().map((n) => n.sep ? `<p class="nav-sep">${n.sep}</p>`
           : `<button class="nav-item" data-go="${n.id}" title="${n.label}">${icon(n.icon)}<span>${n.label}</span>${n.badge ? `<b class="nav-badge">${n.badge}</b>` : ''}</button>`).join('')}</nav>
         <div class="rail-cta"><button class="need-btn" data-act="need" title="Necesito a alguien que…">${icon('spark')}<span>Necesito a alguien que…</span></button></div>
         <button class="rail-me" data-go="perfil" id="railMe">${railMe()}</button>
@@ -53,14 +55,14 @@
       </div>
       <nav class="tabbar" aria-label="Navegación">
         <button class="tab" data-go="inicio">${icon('home')}<span>Inicio</span></button>
-        <button class="tab" data-go="explore">${icon('compass')}<span>Explorar</span></button>
+        <button class="tab" data-go="people">${icon('users')}<span>People</span></button>
         <button class="tab tab-publish" data-act="compose" data-type="building" aria-label="Publicar"><span class="tab-plus">${icon('plus')}</span></button>
-        <button class="tab" data-go="events">${icon('cal')}<span>Eventos</span></button>
-        <button class="tab" data-go="perfil">${icon('user')}<span>Perfil</span></button>
+        <button class="tab" data-go="community">${icon('chat')}<span>Feed</span></button>
+        <button class="tab" data-act="more" data-tab="more" aria-haspopup="dialog">${icon('grid')}<span>Más</span></button>
       </nav>
     </div>`;
   }
-  const tabFor = (v) => (['inicio', 'explore', 'events', 'perfil'].includes(v) ? v : 'explore');
+  const tabFor = (v) => (['inicio', 'people', 'community'].includes(v) ? v : 'more');
   function renderView() {
     const v = C.views[S.view] || C.views.inicio;
     const el = $('#view');
@@ -68,7 +70,7 @@
     el.innerHTML = v.render();
     el.dataset.view = S.view;
     $$('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.go === S.view));
-    $$('.tab[data-go]').forEach((b) => b.classList.toggle('active', b.dataset.go === tabFor(S.view)));
+    $$('.tab[data-go], .tab[data-tab]').forEach((b) => b.classList.toggle('active', (b.dataset.go || b.dataset.tab) === tabFor(S.view)));
     C.mountMotion(el);
     $$('.mcard', el).forEach((m) => C.tilt(m, 10));
     if (C.afterRender) C.afterRender();
@@ -227,6 +229,19 @@
       </div>
       <footer class="m-foot"><p class="fine">Breve y útil. Si pides ayuda, di qué necesitas y para cuándo.</p><button class="btn btn-door" type="submit">Publicar</button></footer>
     </form>`, { label: 'Publicar' });
+  }
+
+  /* ---------- Menú «Más» del celular ---------- */
+  function openMore() {
+    const items = navItems().filter((n) => n.id);
+    C.openLayer('modal', `<header class="m-head"><h2>Secciones</h2><button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${icon('x')}</button></header>
+      <nav class="more-grid" aria-label="Secciones del club">${items.map((n) => `<button type="button" class="more-item${n.id === S.view ? ' on' : ''}" data-go="${n.id}">${icon(n.icon)}<span>${n.label}</span></button>`).join('')}</nav>
+      <div class="menu-foot">
+        <button type="button" class="btn" data-act="need">${icon('spark')}Necesito a alguien que…</button>
+        <button type="button" class="btn btn-ghost" data-act="theme">${icon('sun', 'i-sun')}${icon('moon', 'i-moon')}Cambiar tema</button>
+        <button type="button" class="btn btn-ghost" data-go="landing">${icon('arrow')}Ir a clubcrai.com</button>
+        ${C.isLive() ? `<button type="button" class="btn btn-ghost" data-act="sign-out">${icon('exit')}Cerrar sesión</button>` : ''}
+      </div>`, { cls: 'menu-sheet', label: 'Secciones' });
   }
 
   /* ---------- Necesito a alguien que… ---------- */
@@ -489,7 +504,15 @@
     palette: () => openPalette(),
     notifs: () => openNotifs(),
     compose: (el) => openCompose(el.dataset.type, el.dataset.preset || ''),
-    need: () => openNeed(),
+    need: () => { C.closeAll(); setTimeout(openNeed, C.topLayer() ? 120 : 0); },
+    more: () => openMore(),
+    join: (el, e) => (C.openJoin ? C.openJoin('signup') : C.go('inicio', e, el)),
+    login: (el, e) => (C.openJoin ? C.openJoin('signin') : C.go('inicio', e, el)),
+    'edit-profile': (el, e) => {
+      C.closeAll();
+      const jump = () => { const f = $('#profileForm'); if (f) f.scrollIntoView({ behavior: C.RM() ? 'auto' : 'smooth', block: 'start' }); const n = $('#pf-name'); if (n) setTimeout(() => n.focus({ preventScroll: true }), 450); };
+      if (S.view === 'perfil' && S.mode === 'app') jump(); else { C.go('perfil', e, el); setTimeout(jump, 500); }
+    },
     person: (el) => openDrawer('person', el.dataset.id),
     project: (el) => openDrawer('project', el.dataset.id),
     event: (el) => openDrawer('event', el.dataset.id),
@@ -678,6 +701,8 @@
       C.toast('Propuesta enviada a Ximena, que coordina la agenda.', 'cal');
       C.advanceQuest('q5');
     },
+    // El perfil se guarda mientras escribes; «Enter» solo cierra el teclado.
+    profile: () => { const a = doc.activeElement; if (a && a.blur) a.blur(); },
     onboard: (f, e) => {
       readOb(f);
       if (ob.step === 2 && (!ob.name || !ob.building)) { const bad = !ob.name ? $('#obName') : $('#obBuild'); if (bad) bad.reportValidity(); return; }
@@ -706,8 +731,10 @@
   doc.addEventListener('submit', (e) => {
     const f = e.target;
     const kind = f.dataset && f.dataset.form;
-    if (!kind || kind === 'need-landing' || kind === 'apply') return;
+    if (kind === 'apply') return;
+    // Ningún formulario recarga la página (por ejemplo, «Ir» en el teclado del celular).
     e.preventDefault();
+    if (!kind) return;
     const lf = C.liveForms || {};
     const fn = (C.isLive() && lf[kind]) || F[kind] || lf[kind];
     if (fn) fn(f, e);

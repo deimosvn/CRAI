@@ -10,6 +10,13 @@
   C.$$ = (s, r = doc) => Array.from(r.querySelectorAll(s));
   C.esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   C.norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // Solo enlaces web: agrega https:// si falta y descarta otros esquemas (javascript:, data:, etc.).
+  C.safeUrl = (v) => {
+    let u = String(v || '').trim();
+    if (!u) return '';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+    try { const x = new URL(u); return /^https?:$/.test(x.protocol) && x.hostname.includes('.') ? x.href : ''; } catch (e) { return ''; }
+  };
   C.cap = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
   C.debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
@@ -27,11 +34,13 @@
   const st = C.store;
 
   /* ---------- Estado ---------- */
+  // En el club real nadie empieza siguiendo proyectos de ejemplo.
+  const DEMO_FOLLOWS = window.CRAI_LIVE ? [] : ['cosecha', 'sinte'];
   const S = (C.S = {
     mode: 'landing',
     view: 'inicio',
     me: Object.assign({}, JSON.parse(JSON.stringify(D.me)), st.get('me', {})),
-    follows: new Set(st.get('follows', ['cosecha', 'sinte'])),
+    follows: new Set(st.get('follows', DEMO_FOLLOWS)),
     followPeople: new Set(st.get('followPeople', [])),
     saved: new Set(st.get('saved', [])),
     going: new Set(st.get('going', [])),
@@ -82,7 +91,7 @@
   };
   // Recarga las preferencias locales (al cambiar de cuenta cambia el espacio de guardado).
   C.reloadLocal = () => {
-    S.follows = new Set(st.get('follows', ['cosecha', 'sinte']));
+    S.follows = new Set(st.get('follows', DEMO_FOLLOWS));
     S.followPeople = new Set(st.get('followPeople', []));
     S.saved = new Set(st.get('saved', []));
     S.going = new Set(st.get('going', []));
@@ -165,7 +174,8 @@
   C.tagLabel = (t) => D.TAGS[t] || t;
   C.firstName = (p) => String(p.name || '').split(' ')[0];
   C.list = (arr) => (arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' y ' + arr[arr.length - 1]);
-  C.projectName = (p) => String(p.building || '').split(' — ')[0] || 'mi proyecto';
+  // «Una app para…» se lee mejor a media frase como «una app para…».
+  C.projectName = (p) => (String(p.building || '').split(' — ')[0] || 'mi proyecto').replace(/^(Un|Una|El|La|Los|Las|Mi) /, (w) => w.toLowerCase());
 
   /* ---------- Piezas de interfaz ---------- */
   C.initials = (name) => String(name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();

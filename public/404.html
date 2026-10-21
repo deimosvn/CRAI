@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Página no encontrada · CRAI Club</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+<script>try{var t=JSON.parse(localStorage.getItem('crai.v1.theme')||'null');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&display=swap">
+<style>
+  /* Página independiente: funciona aunque se sirva desde cualquier ruta. */
+  :root { --bg: #F3F5FA; --ink: #0B0F1E; --muted: #5A6480; --sol: #F2762E; --under: #6E52F5; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #080C16; --ink: #EEF1F8; --muted: #9AA3BC; } }
+  :root[data-theme="dark"] { --bg: #080C16; --ink: #EEF1F8; --muted: #9AA3BC; }
+  * { box-sizing: border-box; margin: 0; }
+  body { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--ink); font-family: Geist, system-ui, sans-serif; text-align: center; }
+  .mark { width: 96px; height: 96px; margin: 0 auto 28px; border-radius: 50%; background: linear-gradient(90deg, var(--sol) 50%, var(--under) 50%); box-shadow: 0 0 80px 10px color-mix(in srgb, var(--sol) 30%, transparent); }
+  h1 { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: clamp(34px, 7vw, 56px); letter-spacing: -.045em; line-height: 1; }
+  p { margin-top: 14px; color: var(--muted); font-size: 16px; }
+  a { display: inline-flex; margin-top: 26px; height: 48px; padding: 0 22px; align-items: center; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true"></div>
+    <h1>Esta página no existe.</h1>
+    <p>Puede que el enlace esté mal escrito o que la página se haya movido.</p>
+    <a href="/" id="home">Volver a CRAI Club</a>
+  </main>
+  <script>
+    // En GitHub Pages el sitio vive bajo /CRAI/: volver a esa raíz.
+    if (location.hostname.endsWith('github.io')) document.getElementById('home').href = '/' + location.pathname.split('/')[1] + '/';
+  </script>
+</body>
+</html>
