@@ -17,7 +17,9 @@
     // Cuentas con panel de administración (correo verificado). Debe coincidir con isAdmin() en firestore.rules.
     admins: ['diego.martinez111213@gmail.com'],
     // Correo para dudas, privacidad y solicitudes de borrado. Vacío = no se muestra.
-    contactEmail: '',
+    contactEmail: 'contacto@clubcrai.com',
+    // Servidor que firma los pases de Apple Wallet (funciones de Vercel en clubcrai.com). Ver docs/WALLET.md.
+    walletApi: 'https://www.clubcrai.com/api/wallet',
     // Con ?emulator en localhost, la app usa los emuladores locales de Auth y Firestore.
     emulators: { auth: 'http://127.0.0.1:9099', firestore: ['127.0.0.1', 8080] }
   };

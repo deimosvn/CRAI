@@ -7,14 +7,17 @@ on:
 
 jobs:
   check:
-    name: Sintaxis, enlaces y JSON
+    name: Sitio y pases de Wallet
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+      - run: npm ci
       - run: node scripts/check.mjs
+      - run: npm run test:wallet
 
   rules:
     name: Reglas de Firestore

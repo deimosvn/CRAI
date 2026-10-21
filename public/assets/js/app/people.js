@@ -211,6 +211,7 @@
         </div></div>
         <p class="fine bz-hint">${icon('refresh')}Toca la tarjeta para voltearla</p>
       </div>
+      ${p.id === 'me' && C.isLive() && C.walletButton ? `<div class="bz-wallet">${C.walletButton('member')}</div>` : ''}
       <footer class="m-foot"><button class="btn" data-act="copy-link" data-link="${liveLink ? esc(location.origin + location.pathname + '#p-' + p.uid) : 'https://' + esc(handle)}">${icon('link')}Copiar enlace</button>${p.id === 'me' ? '<button class="btn btn-primary" data-act="edit-profile">Editar mi tarjeta</button>' : `<button class="btn btn-door" data-act="contact" data-id="${p.id}">${icon('send')}Presentarme</button>`}</footer>`,
     { label: 'Tarjeta de ' + p.name, cls: 'bz-modal' });
     C.tilt(panel.querySelector('.bz-zone'), 12);

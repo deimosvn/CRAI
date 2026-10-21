@@ -131,3 +131,12 @@
   .adm-row { grid-template-columns: auto minmax(0, 1fr); }
   .adm-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ---------- Apple Wallet ---------- */
+.wallet-slot { display: contents; }
+.wallet-btn { gap: 8px; background: #000; color: #fff; border-color: #000; }
+.wallet-btn:hover { border-color: #000; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .7); }
+:root[data-theme="dark"] .wallet-btn { border-color: rgba(255, 255, 255, .28); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wallet-btn { border-color: rgba(255, 255, 255, .28); } }
+.wallet-ic { width: 20px; height: 20px; flex: none; }
+.bz-wallet { display: flex; justify-content: center; padding: 0 20px 16px; }

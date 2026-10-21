@@ -37,6 +37,7 @@ const api = {
   ts,
   emulators: useEmulators,
   currentUser: () => auth.currentUser,
+  idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error('Sin sesión'))),
   onUser: (cb) => onAuthStateChanged(auth, cb),
 
   async google() {

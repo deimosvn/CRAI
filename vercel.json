@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "public",
+  "functions": {
+    "api/wallet/*.js": {
+      "includeFiles": "server/wallet/model/**",
+      "maxDuration": 15
+    }
+  }
+}

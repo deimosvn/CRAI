@@ -29,8 +29,9 @@ Luego abre `http://localhost:5000/?emulator`. El parámetro `?emulator` hace que
 
 ```bash
 npm run check        # sintaxis de los scripts, enlaces de los HTML y JSON
+npm run test:wallet  # pases de Apple Wallet con certificados de prueba
 npm run test:rules   # pruebas de firestore.rules contra el emulador
-npm test             # las dos cosas
+npm test             # todo lo anterior
 ```
 
 GitHub Actions corre lo mismo en cada push (`.github/workflows/ci.yml`).
@@ -39,7 +40,7 @@ GitHub Actions corre lo mismo en cada push (`.github/workflows/ci.yml`).
 
 | Dirección | Servicio | Qué publica |
 |---|---|---|
-| https://www.clubcrai.com | Vercel, conectado a `deimosvn/CRAI-TEC` | La carpeta `public/`, en cada push a `main` |
+| https://www.clubcrai.com | Vercel, conectado a `deimosvn/CRAI-TEC` | La carpeta `public/` y las funciones de `api/` (Apple Wallet), en cada push a `main` |
 | https://club-de-robotica-crai.web.app | Firebase Hosting | La carpeta `public/`, con `npm run deploy` |
 | https://deimosvn.github.io/CRAI/ | GitHub Pages de `deimosvn/CRAI` | Ver abajo |
 

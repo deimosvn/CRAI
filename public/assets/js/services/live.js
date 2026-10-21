@@ -305,7 +305,8 @@
       intent = null;
       dropIntent();
       C.closeAll();
-      C.toast('El equipo de CRAI bloqueó esta cuenta. Si crees que es un error, escríbenos.', 'shield');
+      const mail = (window.CRAI_CONFIG || {}).contactEmail;
+      C.toast(`El equipo de CRAI bloqueó esta cuenta. Si crees que es un error, escríbenos${mail ? ` a ${esc(mail)}` : ''}.`, 'shield');
       fb.signOut().catch(() => {});
       return;
     }

@@ -177,7 +177,7 @@
         <p style="color:var(--night-ink-2)">${esc(e.desc)}</p></div>
       <div class="d-sec"><div class="ev-sub" style="font-size:14px"><span>${icon('cal')}${C.fmtLong(d)}</span><span>${icon('clock')}${esc(e.time)}</span><span>${icon('pin')}${esc(e.venue)}</span></div>
         ${e.past ? '' : `<div class="cap" style="width:100%"><div class="bar" style="--v:${Math.min(100, (g / e.cap) * 100)}%"><i></i></div><span class="tnum">${g} de ${e.cap} lugares · quedan ${Math.max(0, e.cap - g)}</span></div>
-        <div class="d-actions">${C.regBtn(e)}${C.remindBtn(e)}</div>`}</div>
+        <div class="d-actions">${C.regBtn(e)}${C.remindBtn(e)}${e.kind === 'Build Night' && C.walletButton ? C.walletButton('event') : ''}</div>`}</div>
       ${e.agenda ? `<div class="d-sec"><h3>Agenda</h3><ul class="agenda" style="margin-top:0">${e.agenda.map(([t, a]) => `<li><time>${t}</time>${esc(a)}</li>`).join('')}</ul></div>` : ''}
       ${e.results ? `<div class="d-sec"><h3>Resultados</h3><div class="results-box"><div><b>${e.results.demos}</b><small>demos</small></div><div><b>${e.results.connections}</b><small>conexiones nuevas</small></div></div><ul class="why-list">${e.results.highlights.map((h) => `<li>${icon('check')}<span>${esc(h)}</span></li>`).join('')}</ul></div>` : ''}
       <div class="d-sec"><h3>Asistentes</h3><div class="attendee-grid">${list.map((a) => { const p = C.person(a); return `<button class="attendee" data-act="person" data-id="${a}" data-hc="${a}">${C.avatar(p, 'xs', { presence: true })}${esc(a === 'me' ? 'Tú' : p.name)}</button>`; }).join('')}</div>

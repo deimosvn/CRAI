@@ -34,11 +34,15 @@ public/                    Sitio publicado (Vercel, Firebase Hosting y GitHub Pa
       app/people.js        Tarjeta emergente, perfil completo, tarjeta de presentación y primer contacto
       app/app.js           Navegación, cajones, diálogos, acciones y arranque
       services/live.js     Modo real: sesión, perfiles, feed, mensajes, cuentas y admin
+      services/wallet.js   Botones de Apple Wallet (pide los pases al servidor)
       services/firebase.js SDK de Firebase (módulo ES); expone una API pequeña a live.js
     img/                   Favicon, íconos de la app e imagen para redes (og-image.png)
+api/wallet/                Funciones de Vercel que firman los pases de Apple Wallet
+server/wallet/             Código compartido de esas funciones e imágenes de los pases
+vercel.json                Carpeta publicada y funciones de Vercel
 docs/                      Esta documentación
 scripts/check.mjs          Revisión de sintaxis, enlaces y JSON (npm run check)
-tests/                     Pruebas de las reglas de Firestore (npm run test:rules)
+tests/                     Pruebas de las reglas de Firestore y de los pases de Wallet
 firestore.rules            Reglas de seguridad de la base de datos
 firestore.indexes.json     Índices de Firestore (hoy no se necesita ninguno compuesto)
 firebase.json              Hosting, reglas y emuladores
@@ -55,8 +59,9 @@ Todos los scripts comparten un objeto global `window.CRAI` (en el código, `C`) 
 4. `toons.js` agrega los personajes (`C.avatar`, `C.toonSVG`).
 5. `landing.js`, las vistas, `admin.js` y `people.js` registran vistas en `C.views` y acciones en `C.extraActions`.
 6. `app.js` junta todas las acciones y formularios y escucha los clics (`data-act`, `data-go`) y envíos (`data-form`).
-7. `live.js` envuelve la navegación para pedir sesión y registra `C.liveActions` / `C.liveForms`.
-8. `firebase.js` (módulo) inicia Firebase y llama `C.attachFirebase(api)`.
+7. `wallet.js` registra los botones de Apple Wallet (antes de `app.js`, para que sus acciones se junten).
+8. `live.js` envuelve la navegación para pedir sesión y registra `C.liveActions` / `C.liveForms`.
+9. `firebase.js` (módulo) inicia Firebase y llama `C.attachFirebase(api)`.
 
 La interfaz se pinta con plantillas de texto. Para agregar algo:
 
@@ -83,6 +88,10 @@ Las preferencias que no necesitan servidor (tema, filtros, proyectos seguidos) s
 | `bans/{uid}` | Cuenta bloqueada | La persona y admin | Solo admin |
 
 Los detalles y límites de cada campo están en `firestore.rules`, y cada regla tiene su prueba en `tests/firestore.rules.test.mjs`.
+
+## Apple Wallet
+
+La credencial de miembro y la invitación al Build Night se firman en Vercel (`api/wallet`). Detalles y cómo activarlo: [WALLET.md](WALLET.md).
 
 ## Administración
 

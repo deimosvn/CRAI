@@ -18,9 +18,11 @@ const walk = (dir) => readdirSync(dir).flatMap((name) => {
   return statSync(p).isDirectory() ? walk(p) : [p];
 });
 const files = walk(PUBLIC);
+// Funciones de servidor (Vercel): también se revisa su sintaxis.
+const serverFiles = [join(ROOT, 'api'), join(ROOT, 'server')].filter(existsSync).flatMap(walk).filter((f) => extname(f) === '.js');
 
 // 1. Sintaxis de JavaScript (firebase.js es un módulo ES).
-for (const file of files.filter((f) => extname(f) === '.js')) {
+for (const file of [...files.filter((f) => extname(f) === '.js'), ...serverFiles]) {
   const isModule = /^\s*import\s/m.test(readFileSync(file, 'utf8'));
   try {
     if (isModule) execFileSync(process.execPath, ['--input-type=module', '--check'], { input: readFileSync(file), stdio: ['pipe', 'ignore', 'pipe'] });
@@ -59,4 +61,4 @@ if (errors.length) {
   console.error(`✖ ${errors.length} problema(s):\n\n${errors.join('\n\n')}`);
   process.exit(1);
 }
-console.log(`✔ ${files.length} archivos revisados en public/: sintaxis, enlaces y JSON en orden.`);
+console.log(`✔ ${files.length} archivos de public/ y ${serverFiles.length} del servidor revisados: sintaxis, enlaces y JSON en orden.`);
